@@ -390,7 +390,24 @@ function getReportProxyURL(){
  return (stored||DEFAULT_REPORT_PROXY_URL).replace(/\/+$/,'');
 }
 
+const reportResponseCache=new Map();
+const reportRequestInflight=new Map();
+const REPORT_RESPONSE_TTL=10*60*1000;
 async function fetchActivityPGCR(id){
+ const key=String(id);
+ const cached=reportResponseCache.get(key);
+ if(cached&&cached.expires>Date.now())return cached.data;
+ if(reportRequestInflight.has(key))return reportRequestInflight.get(key);
+ const pending=fetchActivityPGCRUncached(key);
+ reportRequestInflight.set(key,pending);
+ try{
+  const data=await pending;
+  if(reportResponseCache.size>=30)reportResponseCache.delete(reportResponseCache.keys().next().value);
+  reportResponseCache.set(key,{data,expires:Date.now()+REPORT_RESPONSE_TTL});
+  return data;
+ }finally{reportRequestInflight.delete(key)}
+}
+async function fetchActivityPGCRUncached(id){
  const proxy=getReportProxyURL();
  if(!proxy){
    try { return await bungie(`/Destiny2/Stats/PostGameCarnageReport/${encodeURIComponent(id)}/`); }
@@ -462,14 +479,17 @@ function openRankedGuardian(type,id){openGuardian(Number(type),String(id),null,n
 // Leaderboard results from previously recorded dungeon reports.
 const sharedRankingCache=new Map();
 const sharedRankingLoading=new Set();
+const sharedRankingFetchedAt=new Map();
+const SHARED_RANKING_TTL=5*60*1000;
 const sharedRankingErrors=new Map();
 const SHARED_RANKING_METRICS={clears:'completions',speed:'fastest',kills:'kills'};
-const SHARED_RANKING_LABELS={clears:'Confirmed Full Starts',speed:'Best Full-Start Time',kills:'Dungeon Kills'};
+const SHARED_RANKING_LABELS={clears:'Completions',speed:'Fastest Full Clear',kills:'Dungeon Kills'};
 function sharedRankingKey(){return `${SHARED_RANKING_METRICS[metric]||'completions'}|${chosen}`;}
-function refreshRankings(){const key=sharedRankingKey();sharedRankingCache.delete(key);sharedRankingErrors.delete(key);void fetchSharedRankings(true);}
+function refreshRankings(){const key=sharedRankingKey();sharedRankingCache.delete(key);sharedRankingFetchedAt.delete(key);sharedRankingErrors.delete(key);void fetchSharedRankings(true);}
 async function fetchSharedRankings(force=false){
  const key=sharedRankingKey();
- if(sharedRankingLoading.has(key)||(!force&&sharedRankingCache.has(key)))return;
+ if(sharedRankingLoading.has(key))return;
+ if(!force&&sharedRankingCache.has(key)&&Date.now()-(sharedRankingFetchedAt.get(key)||0)<SHARED_RANKING_TTL)return;
  sharedRankingLoading.add(key);sharedRankingErrors.delete(key);
  const params=new URLSearchParams({metric:SHARED_RANKING_METRICS[metric]||'completions',limit:'50'});
  if(chosen!=='All Dungeons')params.set('dungeon',chosen);
@@ -478,7 +498,7 @@ async function fetchSharedRankings(force=false){
   const res=await fetch(endpoint,{headers:{'Accept':'application/json'}});
   const body=await res.json();
   if(!res.ok||!body?.ok||!Array.isArray(body.guardians))throw new Error(body?.error||`Leaderboard returned HTTP ${res.status}`);
-  sharedRankingCache.set(key,body);
+  sharedRankingCache.set(key,body);sharedRankingFetchedAt.set(key,Date.now());
  }catch(e){sharedRankingErrors.set(key,String(e.message||e));}
  finally{sharedRankingLoading.delete(key);if(current==='overview'||current==='leaderboards')render();}
 }
@@ -486,9 +506,10 @@ function leaderboard(){
  if(metric==='speed'&&chosen==='All Dungeons')return `<div class="tablepanel" style="padding:20px"><div class="tabs">${Object.entries(SHARED_RANKING_LABELS).map(([k,v])=>`<button class="tab ${metric===k?'active':''}" onclick="metric='${k}';render()">${v}</button>`).join('')}</div><p class="note">Choose a specific dungeon to compare full-start completion times. Different dungeons cannot share a fair fastest-time ranking.</p><button class="smalllink" onclick="navigate('leaderboards')">Select dungeon →</button></div>`;
  const key=sharedRankingKey();
  const body=sharedRankingCache.get(key);
+ const stale=!!body&&Date.now()-(sharedRankingFetchedAt.get(key)||0)>=SHARED_RANKING_TTL;
  const results=body?.guardians||[];
  const label=SHARED_RANKING_LABELS[metric]||'Completions';
- if(!body&&!sharedRankingLoading.has(key)&&!sharedRankingErrors.has(key))void fetchSharedRankings();
+ if((!body||stale)&&!sharedRankingLoading.has(key)&&!sharedRankingErrors.has(key))void fetchSharedRankings();
  const loading=sharedRankingLoading.has(key);
  const error=sharedRankingErrors.get(key);
  const rows=results.map((g,i)=>{
@@ -496,15 +517,15 @@ function leaderboard(){
   const valid=Number.isInteger(type)&&type>0&&/^\d{5,25}$/.test(id);
   const name=escapeHtml(String(g.bungie_name||'Unknown Guardian'));
   const value=metric==='speed'?(Number(g.fastest_seconds)>0?duration(Number(g.fastest_seconds)):'—'):
-   metric==='kills'?formatInt(Number(g.kills)||0):formatInt(Number(g.confirmed_full_starts??g.completions)||0);
-  const player=valid?`<button type="button" class="real-guardian-link" onclick="openRankedGuardian(${type},'${id}')"><span class="avatar">${name.slice(0,1).toUpperCase()}</span>${name} ↗</button>`:`<b>${name}</b>`;
+   metric==='kills'?formatInt(Number(g.kills)||0):formatInt(Number(g.recorded_completions??g.completions)||0);
+  const player=valid?`<button type="button" class="real-guardian-link" onclick="openRankedGuardian(${type},'${id}')"><span class="avatar">${escapeHtml(String(g.bungie_name||'G').slice(0,1).toUpperCase())}</span>${name} ↗</button>`:`<b>${name}</b>`;
   return `<tr><td><span class="rank ${i<3?'top':''}">${String(i+1).padStart(2,'0')}</span></td><td>${player}</td><td><b>${value}</b></td><td class="hide-mobile">${escapeHtml(chosen)}</td></tr>`;
  }).join('');
  const empty=loading?'Loading rankings…':error?`Couldn't load rankings right now.`:
    'No recorded runs for this selection yet.';
  const emptyNote=error?'Try refreshing in a moment.':
   'Try another dungeon or check back later.';
- return `<div class="tablepanel real-leaderboard"><div class="tabs">${Object.entries(SHARED_RANKING_LABELS).map(([k,v])=>`<button class="tab ${metric===k?'active':''}" onclick="metric='${k}';render()">${v}</button>`).join('')}</div><div class="real-rank-tools"><span>${body?results.length+' Guardians shown':loading?'Loading rankings…':'Recorded runs only'}</span><button class="smalllink" onclick="refreshRankings()">Refresh ↻</button></div><div style="overflow-x:auto"><table><thead><tr><th>Rank</th><th>Guardian</th><th>${label}</th><th class="hide-mobile">Dungeon</th></tr></thead><tbody>${rows||`<tr><td class="real-rank-empty" colspan="4"><b>${empty}</b><p>${emptyNote}</p></td></tr>`}</tbody></table></div><p class="note" style="padding:10px 16px">Full-start totals only count reports explicitly marked as started from the beginning. Previously indexed reports are checked as their activity pages are opened. Recorded checkpoint completions are not included in full-start rankings.</p></div>`;
+ return `<div class="tablepanel real-leaderboard"><div class="tabs">${Object.entries(SHARED_RANKING_LABELS).map(([k,v])=>`<button class="tab ${metric===k?'active':''}" onclick="metric='${k}';render()">${v}</button>`).join('')}</div><div class="real-rank-tools"><span>${body?results.length+' Guardians shown':loading?'Loading rankings…':'Recorded runs only'}</span><button class="smalllink" onclick="refreshRankings()">Refresh ↻</button></div><div style="overflow-x:auto"><table><thead><tr><th>Rank</th><th>Guardian</th><th>${label}</th><th class="hide-mobile">Dungeon</th></tr></thead><tbody>${rows||`<tr><td class="real-rank-empty" colspan="4"><b>${empty}</b><p>${emptyNote}</p></td></tr>`}</tbody></table></div><p class="note" style="padding:10px 16px">Completions include completed checkpoint runs. Rankings reflect reports indexed so far and may not include a Guardian’s entire history.</p></div>`;
 }
 async function warmupRealRankings(force=false){
  if(rankingWarmupActive||(!force&&rankingWarmupAttempted))return;
@@ -536,9 +557,9 @@ async function warmupRealRankings(force=false){
  if(current==='overview'||current==='leaderboards')render();
 }
 
-function render(){let out='';if(current==='overview'){out=`<div class="sectionhead home-first-heading"><div><h2>Explore Dungeons</h2><p>All 11 Destiny 2 dungeons</p></div><button class="smalllink" onclick="navigate('dungeons')">View all dungeons →</button></div>${cards(8)}<div class="sectionhead"><div><h2>Guardian Leaderboards</h2><p>Rankings from recorded dungeon runs</p></div><button class="smalllink" onclick="navigate('leaderboards')">View rankings →</button></div>${leaderboard()}`}
+function render(){let out='';if(current==='overview'){out=`<div class="sectionhead home-first-heading"><div><h2>Explore Dungeons</h2><p>All 11 Destiny 2 dungeons</p></div><button class="smalllink" onclick="navigate('dungeons')">View all dungeons →</button></div>${cards(8)}<div class="sectionhead"><div><h2>Guardian Leaderboards</h2><p>Completed dungeon activities indexed so far</p></div><button class="smalllink" onclick="navigate('leaderboards')">View rankings →</button></div>${leaderboard()}`}
 else if(current==='dungeons'){out=`<div class="sectionhead" style="margin-top:9px"><div><h2 style="font-size:34px">All Dungeons</h2><p>Browse all Destiny 2 dungeons</p></div><div class="controls"><select class="select" aria-label="Filter dungeons" onchange="filter=this.value;render()"><option value="all" ${filter==='all'?'selected':''}>All releases</option><option value="recent" ${filter==='recent'?'selected':''}>2024+</option><option value="classic" ${filter==='classic'?'selected':''}>2018–2021</option></select><select class="select" aria-label="Sort dungeons" onchange="sort=this.value;render()"><option value="newest" ${sort==='newest'?'selected':''}>Newest first</option><option value="oldest" ${sort==='oldest'?'selected':''}>Oldest first</option><option value="az" ${sort==='az'?'selected':''}>A to Z</option></select></div></div>${cards()}`}
-else if(current==='leaderboards'){out=`<div class="sectionhead" style="margin-top:9px"><div><h2 style="font-size:34px">Guardian Leaderboards</h2><p>Rankings from recorded dungeon runs</p></div><select class="select" aria-label="Dungeon filter" onchange="chosen=this.value;render()">${['All Dungeons',...data.map(d=>d.name)].map(n=>`<option value="${escapeHtml(n)}" ${chosen===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}</select></div>${leaderboard()}`}
+else if(current==='leaderboards'){out=`<div class="sectionhead" style="margin-top:9px"><div><h2 style="font-size:34px">Guardian Leaderboards</h2><p>Completed dungeon activities indexed so far</p></div><select class="select" aria-label="Dungeon filter" onchange="chosen=this.value;render()">${['All Dungeons',...data.map(d=>d.name)].map(n=>`<option value="${escapeHtml(n)}" ${chosen===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}</select></div>${leaderboard()}`}
 else if(current==='profile'){out=`<h1 style="font:700 37px 'Space Grotesk';letter-spacing:-1px">Player lookup</h1><div class="searchcallout"><h2 style="font:700 22px 'Space Grotesk';margin-top:0">Find a Guardian</h2><p style="color:#9aabbd">Type part of a Bungie Name to find matching accounts, or enter a full Name#1234 for direct lookup.</p><form onsubmit="event.preventDefault();showProfile(document.getElementById('playerInput').value)"><input id="playerInput" placeholder="Guardian#1234" value="${escapeHtml(lookupQuery)}" autocomplete="off" oninput="scheduleLookup(this.value)" required><button class="primary" type="submit">Find Player →</button></form><p class="lookup-hint">Select a Guardian below to open their own shareable public profile.</p></div><div id="lookupResults">${lookupResultsHtml()}</div>`}
 else if(current==='guardian'){out=guardianPage()}
 else if(current==='dungeonprofile'){out=dungeonHistoryPage()}
@@ -546,7 +567,7 @@ else if(current==='history'){out=`<h1 style="font:700 37px 'Space Grotesk'">Dung
 
 else if(current==='report'){out=reportPage()}
 
-document.getElementById('page').innerHTML=out+`<footer class="footer" aria-label="DungeonHub credits"><div class="footer-credit"><strong>Developed by kro</strong><span>DungeonHub V22</span></div></footer>`}
+document.getElementById('page').innerHTML=out+`<footer class="footer" aria-label="DungeonHub credits"><div class="footer-credit"><strong>Developed by kro</strong><span>DungeonHub V24</span></div></footer>`}
 function duration(seconds){if(!Number.isFinite(seconds))return '—';const s=Math.max(0,Math.floor(seconds));return `${Math.floor(s/3600)?`${Math.floor(s/3600)}:`:''}${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
 function historyTable(activities){if(!activities.length)return '<div class="empty">No recent dungeon activities returned. The Guardian may have a private profile or no accessible records.</div>';return `<div class="tablepanel" style="overflow-x:auto"><table><thead><tr><th>Dungeon activity</th><th>Date</th><th>Duration</th><th>Completion</th><th>Report</th></tr></thead><tbody>${activities.slice(0,100).map(a=>`<tr><td><b>${escapeHtml(a.name)}</b></td><td>${escapeHtml(new Date(a.date).toLocaleDateString())}</td><td>${duration(a.duration)}</td><td>${a.completed?'<span class="badge">Completed</span>':'Incomplete'}</td><td>${a.instanceId?`<a target="_blank" rel="noopener noreferrer" style="color:var(--accent)" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(a.instanceId)}">PGCR ↗</a>`:'—'}</td></tr>`).join('')}</tbody></table></div><p class="note">Showing up to 100 recorded runs. More may still be loading. Checkpoint clears may be included.</p>`}
 function profile(name){const safe=escapeHtml(name);if(liveLoading)return `<div class="empty"><h2>Looking up ${safe}…</h2><p>Searching Bungie and loading recent dungeon runs for each character.</p></div>`;if(liveError)return `<div class="empty"><h2>Couldn't load ${safe}</h2><p>${escapeHtml(liveError)}</p><p>Try again in a moment.</p><button class="primary" onclick="showProfile(playerName)">Retry search ↻</button></div>`;if(!liveProfile)return '<div class="empty">Search with your Bungie Name (example: Guardian#1234).</div>';let a=liveProfile.activities;const completed=a.filter(x=>x.completed);const known=completed.filter(confirmedFullStart).filter(x=>Number.isFinite(x.duration)&&x.duration>0);const best=known.length?duration(Math.min(...known.map(x=>x.duration))):'—';return `<div class="profilehero"><div class="profileicon">${safe.slice(0,1).toUpperCase()}</div><div><h2>${safe}</h2><p>Bungie activity</p></div></div><div class="sectionhead"><h2>Recent Dungeon Records</h2></div><div class="detailstats"><div><small>Recent runs fetched</small><b>${a.length}</b></div><div><small>Completed (recent)</small><b>${completed.length}</b></div><div><small>Best PGCR full start</small><b>${best}</b></div></div><p class="note">Recent runs only. This is not a lifetime total.</p><div class="sectionhead"><h2>Recent Bungie dungeon activities</h2><button class="smalllink" onclick="navigate('history')">Activity history →</button></div>${historyTable(a)}`;}
@@ -610,13 +631,13 @@ async function loadActivityReport(id,generation){
   reportData=pgcr;reportLoading=false;reportError='';render();
   const hash=pgcr.activityDetails?.directorActivityHash||pgcr.activityDetails?.referenceId;
   if(hash&&!activityNames.has(Number(hash))){await getActivityName(hash);if(generation===reportGeneration&&current==='report')render()}
-  const rankedWeapons=Array.from(new Set(pgcr.entries.flatMap(e=>e.extended?.weapons||[]).map(w=>String(w.referenceId||'')).filter(Boolean)));
+  const rankedWeapons=Array.from(new Set(pgcr.entries.slice(0,24).flatMap(e=>e.extended?.weapons||[]).map(w=>String(w.referenceId||'')).filter(Boolean)));
   // Cap manifest lookups for one report to avoid bombarding Bungie's API.
   for(let i=0;i<Math.min(30,rankedWeapons.length);i+=5){
    if(generation!==reportGeneration)return;
    await Promise.all(rankedWeapons.slice(i,i+5).map(fetchWeaponDefinition));
-   if(generation===reportGeneration&&current==='report')render();
   }
+  if(generation===reportGeneration&&current==='report')render();
  }catch(e){if(generation!==reportGeneration)return;reportLoading=false;reportError=e.message||String(e);render()}
 }
 function reportWeaponRows(){
