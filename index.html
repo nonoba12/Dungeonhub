@@ -325,7 +325,7 @@ let current='overview',metric='clears',filter='all',sort='newest',chosen='All Du
 let selectedProfileDungeon='',dungeonStatusFilter='all',dungeonDisplayCount=50;
 let historyScan={active:false,complete:false,cancelled:false,loaded:0,pages:0,doneCharacters:0,totalCharacters:0,issues:[],capped:false};
 const HISTORY_PAGE_SIZE=100,MAX_HISTORY_PAGES=300;
-const BUNGIE_API_KEY='97a39a6ef7f6405bacfe85e8b99da513'; // Public browser API key; never place OAuth secrets here.
+const BUNGIE_API_BASE='https://dungeonhub-pgcr.williamsjacob223.workers.dev/bungie'; // Key is stored only as a Cloudflare Worker Secret.
 let liveProfile=null, liveLoading=false, liveError='', requestVersion=0;
 let lookupQuery='',lookupMatches=[],lookupPhase='idle',lookupError='',lookupDelay=null,lookupSeq=0;
 let headerQuery='',headerMatches=[],headerPhase='idle',headerDelay=null,headerSeq=0;
@@ -1023,7 +1023,21 @@ async function loadAccount(type,id,version,knownAccount){
   if(all.some(a=>a.completed&&matchDungeon(a.name)))void verifyProfileAchievements(version);
  }catch(e){if(version!==requestVersion)return;liveError=e.message||String(e);liveLoading=false;historyScan.active=false;refreshProfileView();}
 }
-async function bungie(path,options={}){let response;try{response=await fetch('https://www.bungie.net/Platform'+path,{...options,headers:{'X-API-Key':BUNGIE_API_KEY,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}})}catch(e){throw new Error('Network or CORS request blocked. The Bungie API call may be blocked, offline, rate-limited, or rejecting this endpoint; check DevTools Network for the actual cause.')}if(!response.ok)throw new Error(`Bungie returned HTTP ${response.status}. Check your Bungie app Origin Header and API key.`);let body=await response.json();if(body.ErrorCode!==1)throw new Error(body.Message||body.ErrorStatus||'Bungie returned an error');return body.Response;}
+async function bungie(path,options={}){
+ let apiResponse;
+ try{
+   apiResponse=await fetch(BUNGIE_API_BASE+path,{
+     method:options.method||'GET',
+     body:options.body,
+     headers:{'Accept':'application/json',...(options.body?{'Content-Type':'application/json'}:{})}
+   });
+ }catch(e){throw new Error('DungeonHub API unavailable. Check your connection or the Cloudflare Worker status.');}
+ let json;
+ try{json=await apiResponse.json();}catch(e){throw new Error('DungeonHub API returned an invalid response.');}
+ if(!apiResponse.ok)throw new Error(json?.Message||json?.error||`DungeonHub API HTTP ${apiResponse.status}`);
+ if(json.ErrorCode!==1)throw new Error(json.Message||json.ErrorStatus||'Bungie returned an error');
+ return json.Response;
+}
 async function getActivityName(hash){if(!hash)return 'Unknown dungeon';if(activityNames.has(hash))return activityNames.get(hash);try{const def=await bungie(`/Destiny2/Manifest/DestinyActivityDefinition/${hash}/`);let title=def?.displayProperties?.name||def?.originalDisplayProperties?.name||`Activity ${hash}`;activityNames.set(hash,title);if(def?.pgcrImage && /^\/[a-zA-Z0-9_\/.-]+$/.test(def.pgcrImage))activityArt.set(hash,'https://www.bungie.net'+def.pgcrImage);return title;}catch(e){return `Activity ${hash}`;}}
 async function loadGuardian(name,version){
  try{
