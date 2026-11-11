@@ -18,7 +18,7 @@
 .record-tile-cover:before{content:'';position:absolute;inset:0;background:linear-gradient(0deg,#070911c9 0%,#06071312 80%);z-index:-1}
 .record-tile-cover:after{content:attr(data-glyph);position:absolute;top:0;right:13px;opacity:.12;font-size:100px;font-weight:900;z-index:-1}
 .record-tile-cover h3{font:800 clamp(14px,1.45vw,21px) 'Space Grotesk',sans-serif;margin:0;text-transform:uppercase;line-height:1.18;text-shadow:0 2px 8px #000b;overflow-wrap:anywhere}
-.record-tile-cover small{color:#e0e7e9;font-size:10px;letter-spacing:.6px;text-transform:uppercase;margin-bottom:7px}
+.record-tile-cover small{color:#e0e7e9;font-size:10px;letter-spacing:.6px;text-transform:uppercase;margin-bottom:7px}.record-badges{position:absolute;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:58%;z-index:2}.record-badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.3px;color:#fff;background:#1e2b38;border:1px solid #44576b;text-shadow:none;box-shadow:0 2px 8px #0007}.record-badge.sf{background:#0ea5e9;border-color:#52c6ff}.record-badge.solo{background:#2563eb;border-color:#6aa3ff}.record-badge.flawless{background:#0f766e;border-color:#4fd1c5}
 .record-tile-content{padding:17px 17px 20px;min-height:215px}
 .record-chart-row{display:flex;align-items:center;gap:12px;border-bottom:1px solid #292b38;padding-bottom:17px}
 .record-chart{position:relative;flex:1;height:57px;min-width:0}
@@ -375,7 +375,7 @@ function guardianPage(){
  const charCards=characters.map(c=>`<div class="characterbox"><div class="characterbadge">${['TITAN','HUNTER','WARLOCK'][c.classType]||'GUARDIAN'}</div><strong>${escapeHtml(c.classLabel)}</strong><span>Power ${formatInt(c.light)}</span><small>${escapeHtml(c.raceLabel||'')} · ${escapeHtml(c.genderLabel||'')}</small></div>`).join('');
  let tabContent='';
  if(profileTab==='overview'){
-  const recent=a.slice(0,8);tabContent=`<section><div class="panel-title sectionhead"><div><h2>Dungeon gallery</h2><p class="profile-section-caption">Live recent dungeon history · completion timelines · report links</p></div><button class="smalllink" onclick="profileTab='dungeons';render()">Filter dungeons →</button></div>${dungeonRows(a,false)}</section><section class="profile-panel" style="margin-top:23px"><div class="panel-title"><h2>Characters</h2><span class="muted">${characters.length} found</span></div><div class="charactergrid">${charCards||'<p class="muted">No public characters.</p>'}</div><div class="subnote">Power and class details are supplied by Bungie.</div></section><div class="panel-title sectionhead"><h2>Latest dungeon runs</h2><button class="smalllink" onclick="profileTab='runs';render()">View all recent runs →</button></div>${historyTable(recent)}`;
+  const recent=a.slice(0,8);tabContent=`<section><div class="panel-title sectionhead"><div><h2>Dungeon gallery</h2><p class="profile-section-caption">Live recent dungeon history · completion timelines · report links</p></div><select class="select" aria-label="Filter dungeons" onchange="dungeonFilter=this.value;render()"><option value="all" ${dungeonFilter==='all'?'selected':''}>All dungeons</option><option value="played" ${dungeonFilter==='played'?'selected':''}>Played only</option></select></div>${dungeonRows(a,false)}</section><section class="profile-panel" style="margin-top:23px"><div class="panel-title"><h2>Characters</h2><span class="muted">${characters.length} found</span></div><div class="charactergrid">${charCards||'<p class="muted">No public characters.</p>'}</div><div class="subnote">Power and class details are supplied by Bungie.</div></section><div class="panel-title sectionhead"><h2>Latest dungeon runs</h2><button class="smalllink" onclick="profileTab='runs';render()">View all recent runs →</button></div>${historyTable(recent)}`;
  }else if(profileTab==='dungeons'){
   tabContent=`<div class="panel-title sectionhead"><div><h2>Dungeon statistics</h2><p>Completions and fastest times within fetched activity history</p></div><select class="select" onchange="dungeonFilter=this.value;render()"><option value="all" ${dungeonFilter==='all'?'selected':''}>All dungeons</option><option value="played" ${dungeonFilter==='played'?'selected':''}>Played only</option></select></div>${dungeonRows(a,false)}`;
  }else{
@@ -384,7 +384,7 @@ function guardianPage(){
  return `<div class="profile-cover"><div class="profile-cover-art">✧</div><div class="eyebrow">DUNGEONHUB / GUARDIAN PROFILE <span style="color:#cdd5df;font-weight:600;letter-spacing:normal;margin-left:14px"></span></div><div class="profile-mainline"><div class="profilebigavatar">${initials}</div><div class="profileidentity"><h1>${escapeHtml(displayName)}</h1><div class="profilemeta"><span class="badge">● BUNGIE LIVE</span><span>${escapeHtml(memberType)}</span><span>Membership ${escapeHtml(String(account.membershipId))}</span></div></div><div class="profileactions"><button class="pill" id="copyLinkBtn" onclick="copyProfileLink()">Copy profile link</button><button class="pill" onclick="navigate('profile')">New search ↗</button></div></div></div>
  <div class="profilemetrics"><div><small>Recent dungeon runs</small><strong>${formatInt(a.length)}</strong><span>Fetched from Bungie</span></div><div><small>Recent completions</small><strong>${formatInt(done.length)}</strong><span>Within fetched runs</span></div><div><small>Fastest recent clear</small><strong>${bestRecentRun?.instanceId?`<a class="profile-best-report" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(bestRecentRun.instanceId)}" target="_blank" rel="noopener noreferrer">${duration(bestRecentRun.duration)} ↗</a>`:(fastest!==null?duration(fastest):'—')}</strong><span>${bestRecentRun?escapeHtml(new Date(bestRecentRun.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})):'Across all dungeons'}</span></div><div><small>Recent dungeon kills</small><strong>${formatInt(kills)}</strong><span>${formatInt(deaths)} deaths in fetched runs</span></div><div><small>Last dungeon activity</small><strong class="smaller">${last}</strong><span>Most recent recorded run</span></div></div>
  <div class="profile-warning">ⓘ <span><b>Recent activity sample, not lifetime totals.</b> Bungie activity history is paginated, and this browser-only prototype currently retrieves up to 100 dungeon runs per character. Solo, flawless, dungeon-specific verified speedruns and all-time records require deeper indexing and PGCR verification. This is a dedicated public player page, not a privacy-restricted account.</span></div>
- <div class="profiletabs"><button class="${profileTab==='overview'?'selected':''}" onclick="profileTab='overview';render()">Overview</button><button class="${profileTab==='dungeons'?'selected':''}" onclick="profileTab='dungeons';render()">Dungeon Records</button><button class="${profileTab==='runs'?'selected':''}" onclick="profileTab='runs';render()">Activity History</button></div>${tabContent}`;
+ <div class="profiletabs"><button class="${profileTab==='overview'?'selected':''}" onclick="profileTab='overview';render()">Overview</button><button class="${profileTab==='runs'?'selected':''}" onclick="profileTab='runs';render()">Activity History</button></div>${tabContent}`;
 }
 function relativeRunTime(iso){
  const when=new Date(iso).getTime(); if(!Number.isFinite(when))return 'Date unknown';
@@ -429,11 +429,16 @@ document.addEventListener('click',e=>{if(e.target.closest?.('.record-dot-hit'))h
 window.addEventListener('scroll',()=>{if(visibleRunDot)moveRunTooltip(visibleRunDot)},{passive:true});
 window.addEventListener('resize',()=>{if(visibleRunDot)moveRunTooltip(visibleRunDot)});
 
+function normalizeDungeonText(value){return String(value||'').normalize('NFKD').replace(/[’‘`´]/g,"'").replace(/[^a-zA-Z0-9]+/g,' ').trim().toLowerCase()}
+function dungeonAliases(d){const set=new Set([d.name, d.name.replace(/^The\s+/i,''), d.name.replace(/’/g,"'"), d.name.replace(/'/g,''), d.name.replace(/’/g,'')]);if(d.name==='The Shattered Throne')set.add('Shattered Throne');if(d.name==='Warlord’s Ruin'){set.add("Warlord's Ruin");set.add('Warlords Ruin')}if(d.name==='Vesper’s Host')set.add("Vesper's Host");return [...set].map(normalizeDungeonText).filter(Boolean)}
+function matchDungeon(activityName){const normalized=normalizeDungeonText(activityName);if(!normalized)return null;for(const d of data){const aliases=dungeonAliases(d);if(aliases.some(alias=>normalized.includes(alias)))return d;}return null}
+function badgeMarkup(label,kind){return `<span class="record-badge ${kind}">${label}</span>`}
+
 function dungeonRows(activities,compact){
  // A record card shows the complete recent sample of run results for its dungeon.
  const byName=new Map(data.map(d=>[d.name,{d,runs:[],clears:[],image:CUSTOM_DUNGEON_IMAGES[d.name]||''}]));
  for(const a of activities){
-  const match=data.find(d=>a.name?.toLowerCase().includes(d.name.toLowerCase()) || (d.name==='The Shattered Throne' && a.name?.toLowerCase().includes('shattered throne')));
+  const match=matchDungeon(a.name);
   if(!match)continue;
   const r=byName.get(match.name);r.runs.push(a);
   if(a.completed && Number.isFinite(a.duration))r.clears.push(a);
@@ -448,6 +453,10 @@ function dungeonRows(activities,compact){
   const fastest=done.length?done.reduce((best,run)=>run.duration<best.duration?run:best):null;
   const latest=done[0]||null;
   const avg=done.length?done.reduce((t,x)=>t+x.duration,0)/done.length:null;
+  const hasSoloFlawless=done.some(run=>run.playerCount===1&&run.deaths===0);
+  const hasSolo=done.some(run=>run.playerCount===1);
+  const hasFlawless=done.some(run=>run.playerCount>1&&run.deaths===0);
+  const tileBadges=[hasSoloFlawless?badgeMarkup('Solo Flawless','sf'):'',(!hasSoloFlawless&&hasSolo)?badgeMarkup('Solo','solo'):'',(!hasSoloFlawless&&hasFlawless)?badgeMarkup('Flawless','flawless'):''].join('');
   const validDate=d=>d?new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
   const times=[latest?.duration,fastest?.duration,avg].map(n=>Number.isFinite(n)?duration(n):'N/A');
   const sorted=[...r.runs].sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -466,9 +475,9 @@ function dungeonRows(activities,compact){
   const chartClass=sample.length>10?'record-chart dense':'record-chart';
   const image=r.image?`background-image:linear-gradient(0deg,#0a0b1466,#0a0b1415),url('${r.image}')`:'';
   const bestLink=fastest?.instanceId?`<a class="record-bestlink" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(fastest.instanceId)}" target="_blank" rel="noopener noreferrer" title="Open Bungie activity report">${times[1]} ↗</a>`:`<strong>${times[1]}</strong>`;
-  return `<article class="record-tile"><div class="record-tile-cover" data-glyph="${escapeHtml(r.d.symbol)}" style="--c1:${r.d.c1};--c2:${r.d.c2};${image}"><small>${r.d.year} · ${escapeHtml(r.d.place)}</small><h3>${escapeHtml(r.d.name)}</h3></div><div class="record-tile-content"><div class="record-chart-row"><div class="${chartClass}"><div class="record-chart-line" aria-hidden="true"></div>${timeline}</div><div class="record-total"><strong>${done.length}</strong><span>Recent<br>clears</span></div></div><div class="record-times"><div><strong>${times[0]}</strong><span>Recent</span></div><div>${bestLink}<span>Fastest</span>${fastest?`<small class="record-best-date">${escapeHtml(validDate(fastest.date))}</small>`:""}</div><div><strong>${times[2]}</strong><span>Average</span></div></div></div></article>`;
+  return `<article class="record-tile"><div class="record-tile-cover" data-glyph="${escapeHtml(r.d.symbol)}" style="--c1:${r.d.c1};--c2:${r.d.c2};${image}">${tileBadges?`<div class="record-badges">${tileBadges}</div>`:''}<small>${r.d.year} · ${escapeHtml(r.d.place)}</small><h3>${escapeHtml(r.d.name)}</h3></div><div class="record-tile-content"><div class="record-chart-row"><div class="${chartClass}"><div class="record-chart-line" aria-hidden="true"></div>${timeline}</div><div class="record-total"><strong>${done.length}</strong><span>Recent<br>clears</span></div></div><div class="record-times"><div><strong>${times[0]}</strong><span>Recent</span></div><div>${bestLink}<span>Fastest</span>${fastest?`<small class="record-best-date">${escapeHtml(validDate(fastest.date))}</small>`:""}</div><div><strong>${times[2]}</strong><span>Average</span></div></div></div></article>`;
  };
- return `<div class="profile-dungeon-gallery">${rows.map(tile).join('')}</div><p class="subnote">Hover or focus a dot to see its time, age, and status. Click to open its Bungie-backed report. Green = completed; red = incomplete. Up to 20 recent runs are shown per dungeon; they are not verified full-dungeon clears.</p>`;
+ return `<div class="profile-dungeon-gallery">${rows.map(tile).join('')}</div><p class="subnote">Hover or focus a dot to see its time, age, and status. Click to open its Bungie-backed report. Green = completed; red = incomplete. Badge detection is based on the fetched Bungie activity sample; up to 20 recent runs are shown per dungeon and they are not verified full-dungeon clears.</p>`;
 }
 async function loadAccount(type,id,version,knownAccount){
  try{
@@ -484,7 +493,7 @@ async function loadAccount(type,id,version,knownAccount){
    try{let result=await bungie(`/Destiny2/${type}/Account/${id}/Character/${characterId}/Stats/Activities/?mode=82&count=100&page=0`);return result?.activities||[]}
    catch(e){return []}
   }));
-  let activities=perChar.flat().map(x=>({date:x.period,hash:x.activityDetails?.directorActivityHash||x.activityDetails?.referenceId,instanceId:x.activityDetails?.instanceId,duration:Number(x.values?.activityDurationSeconds?.basic?.value??NaN),completed:Number(x.values?.completed?.basic?.value)===1,kills:Number(x.values?.kills?.basic?.value||0),deaths:Number(x.values?.deaths?.basic?.value||0),assists:Number(x.values?.assists?.basic?.value||0),characterId:x.activityDetails?.characterId||''})).filter(x=>x.date).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  let activities=perChar.flat().map(x=>({date:x.period,hash:x.activityDetails?.directorActivityHash||x.activityDetails?.referenceId,instanceId:x.activityDetails?.instanceId,duration:Number(x.values?.activityDurationSeconds?.basic?.value??NaN),completed:Number(x.values?.completed?.basic?.value)===1,kills:Number(x.values?.kills?.basic?.value||0),deaths:Number(x.values?.deaths?.basic?.value||0),assists:Number(x.values?.assists?.basic?.value||0),playerCount:Number(x.values?.playerCount?.basic?.value??x.values?.playerCount?.basic?.displayValue??NaN),characterId:x.activityDetails?.characterId||''})).filter(x=>x.date).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const hashes=[...new Set(activities.map(x=>x.hash).filter(Boolean))];
   await Promise.all(hashes.slice(0,35).map(getActivityName));
   activities.forEach(a=>{a.name=activityNames.get(a.hash)||`Dungeon activity (${a.hash||'unknown'})`;a.image=activityArt.get(a.hash)||'';});
