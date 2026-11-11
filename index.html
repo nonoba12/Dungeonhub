@@ -82,6 +82,54 @@ a.pgcr-external{display:inline-flex;align-items:center;text-decoration:none;colo
 .pgcr-proxy-row input{min-width:230px;flex:1;background:#0b131e;color:#fff;border:1px solid #536275;border-radius:8px;padding:11px 12px}
 .pgcr-proxy-row button{padding:9px 13px}.pgcr-proxy-tip{font-size:11px;margin-top:10px;color:#8090a4}
 
+
+.record-best-date{display:block;font-size:9px;color:#a7b6c7;letter-spacing:0;text-transform:none;margin-top:5px;line-height:1.2}
+/* V8 accessible activity timeline: each run has its own fixed grid cell.
+   Only its decorative pip scales, so overlapping runs cannot steal clicks. */
+.record-chart { position:relative; display:grid; grid-template-columns:repeat(10,minmax(0,1fr));
+  grid-template-rows:44px; align-items:center; justify-items:stretch; height:44px;
+  gap:0 1px; min-width:0; isolation:isolate; overflow:visible; }
+.record-chart.dense { grid-template-rows:24px 24px; row-gap:11px; height:59px; }
+.record-chart-line {top:50%;left:5px;right:5px;z-index:0;pointer-events:none;}
+.record-chart.dense .record-chart-line{top:12px;left:5px;right:5px;}
+.record-chart.dense::after{content:"";position:absolute;left:5px;right:5px;top:47px;height:2px;background:#697184;pointer-events:none;}
+.record-dot-hit, .record-dot-button { 
+  position:relative;transform:none;inset:auto;border:0;box-shadow:none;
+  appearance:none;outline:none;padding:0;margin:0;background:transparent !important;
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:24px;min-width:0;cursor:pointer;z-index:1;
+  touch-action:manipulation;
+}
+.record-dot-hit:not(button){cursor:help;}
+.record-dot-hit .record-dot-pip{
+  display:block;flex:none;width:11px;height:11px;border-radius:50%;
+  border:1px solid #f3f8ff85;box-shadow:0 0 0 2px #10121a;
+  transition:transform .14s ease, box-shadow .14s ease;
+  pointer-events:none;
+}
+.record-dot-hit.complete .record-dot-pip{background:#4fc975}
+.record-dot-hit.incomplete .record-dot-pip{background:#ff625f}
+.record-dot-hit:hover,.record-dot-hit:focus-visible{z-index:1;transform:none;outline:none;box-shadow:none}
+.record-dot-hit:hover .record-dot-pip,.record-dot-hit:focus-visible .record-dot-pip{
+  transform:scale(1.35);box-shadow:0 0 0 3px #e6f0ff66,0 0 10px #ffffff30;
+}
+.record-dot-hit:focus-visible .record-dot-pip{outline:2px solid #fff;outline-offset:4px}
+.record-chart-empty{top:13px}
+/* Floating tooltip renders at body level; its box never intercepts neighbouring dots. */
+.run-tooltip{position:fixed;z-index:99999;pointer-events:none;opacity:0;visibility:hidden;
+ transform:translateY(4px);transition:opacity .1s ease,transform .1s ease;
+ min-width:130px;max-width:205px;padding:10px 12px;border:1px solid #9cf371;
+ border-radius:10px;background:#060a09f4;box-shadow:0 12px 28px #000b;
+ color:#ebf4ef;font-size:12px;line-height:1.4;white-space:nowrap;text-align:left;
+}
+.run-tooltip.visible{opacity:1;visibility:visible;transform:none}
+.run-tooltip strong{display:block;color:#fff;font-size:15px;letter-spacing:.1px}
+.run-tooltip .run-tooltip-ago{display:block;color:#e0e9db;margin-top:2px}
+.run-tooltip .run-tooltip-date{display:block;color:#b8c4b6;font-size:10px;margin-top:2px}
+.run-tooltip .run-tooltip-status{border-top:1px solid #61715c60;padding-top:6px;margin-top:7px;display:block;color:#a9d897;font-weight:700}
+.run-tooltip[data-status="Incomplete"] .run-tooltip-status{color:#ff9d91}
+@media(max-width:420px){.record-dot-hit .record-dot-pip{width:9px;height:9px}}
+
 </style>
 </head>
 <body>
@@ -333,11 +381,54 @@ function guardianPage(){
  }else{
   tabContent=`<div class="panel-title sectionhead"><div><h2>Activity history</h2><p>${a.length} recent dungeon activities across ${characters.length} characters</p></div></div>${historyTable(a)}`;
  }
- return `<div class="profile-cover"><div class="profile-cover-art">✧</div><div class="eyebrow">DUNGEONHUB / GUARDIAN PROFILE <span style="color:#cdd5df;font-weight:600;letter-spacing:normal;margin-left:14px">GALLERY V7 · WORKER CONNECTED</span></div><div class="profile-mainline"><div class="profilebigavatar">${initials}</div><div class="profileidentity"><h1>${escapeHtml(displayName)}</h1><div class="profilemeta"><span class="badge">● BUNGIE LIVE</span><span>${escapeHtml(memberType)}</span><span>Membership ${escapeHtml(String(account.membershipId))}</span></div></div><div class="profileactions"><button class="pill" id="copyLinkBtn" onclick="copyProfileLink()">Copy profile link</button><button class="pill" onclick="navigate('profile')">New search ↗</button></div></div></div>
+ return `<div class="profile-cover"><div class="profile-cover-art">✧</div><div class="eyebrow">DUNGEONHUB / GUARDIAN PROFILE <span style="color:#cdd5df;font-weight:600;letter-spacing:normal;margin-left:14px"></span></div><div class="profile-mainline"><div class="profilebigavatar">${initials}</div><div class="profileidentity"><h1>${escapeHtml(displayName)}</h1><div class="profilemeta"><span class="badge">● BUNGIE LIVE</span><span>${escapeHtml(memberType)}</span><span>Membership ${escapeHtml(String(account.membershipId))}</span></div></div><div class="profileactions"><button class="pill" id="copyLinkBtn" onclick="copyProfileLink()">Copy profile link</button><button class="pill" onclick="navigate('profile')">New search ↗</button></div></div></div>
  <div class="profilemetrics"><div><small>Recent dungeon runs</small><strong>${formatInt(a.length)}</strong><span>Fetched from Bungie</span></div><div><small>Recent completions</small><strong>${formatInt(done.length)}</strong><span>Within fetched runs</span></div><div><small>Fastest recent clear</small><strong>${bestRecentRun?.instanceId?`<a class="profile-best-report" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(bestRecentRun.instanceId)}" target="_blank" rel="noopener noreferrer">${duration(bestRecentRun.duration)} ↗</a>`:(fastest!==null?duration(fastest):'—')}</strong><span>${bestRecentRun?escapeHtml(new Date(bestRecentRun.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})):'Across all dungeons'}</span></div><div><small>Recent dungeon kills</small><strong>${formatInt(kills)}</strong><span>${formatInt(deaths)} deaths in fetched runs</span></div><div><small>Last dungeon activity</small><strong class="smaller">${last}</strong><span>Most recent recorded run</span></div></div>
  <div class="profile-warning">ⓘ <span><b>Recent activity sample, not lifetime totals.</b> Bungie activity history is paginated, and this browser-only prototype currently retrieves up to 100 dungeon runs per character. Solo, flawless, dungeon-specific verified speedruns and all-time records require deeper indexing and PGCR verification. This is a dedicated public player page, not a privacy-restricted account.</span></div>
  <div class="profiletabs"><button class="${profileTab==='overview'?'selected':''}" onclick="profileTab='overview';render()">Overview</button><button class="${profileTab==='dungeons'?'selected':''}" onclick="profileTab='dungeons';render()">Dungeon Records</button><button class="${profileTab==='runs'?'selected':''}" onclick="profileTab='runs';render()">Activity History</button></div>${tabContent}`;
 }
+function relativeRunTime(iso){
+ const when=new Date(iso).getTime(); if(!Number.isFinite(when))return 'Date unknown';
+ const elapsed=Math.max(0,Date.now()-when);const minutes=Math.floor(elapsed/60000);
+ if(minutes<1)return 'just now';if(minutes<60)return `${minutes}m ago`;
+ const hours=Math.floor(minutes/60);if(hours<24)return `${hours}h ago`;
+ const days=Math.floor(hours/24);if(days<30)return `${days}d ago`;
+ const months=Math.floor(days/30);if(months<12)return `${months}mo ago`;
+ const years=Math.floor(days/365);return `${years}y ago`;
+}
+let visibleRunDot=null;
+function runTooltipNode(){let el=document.getElementById('run-tooltip');
+ if(!el){el=document.createElement('div');el.id='run-tooltip';el.className='run-tooltip';el.setAttribute('role','tooltip');document.body.appendChild(el)}return el;}
+function hideRunTooltip(){const el=document.getElementById('run-tooltip');if(el)el.classList.remove('visible');visibleRunDot=null;}
+function moveRunTooltip(target){const el=document.getElementById('run-tooltip');if(!el||!target?.isConnected)return;
+ const rect=target.getBoundingClientRect();
+ const w=el.offsetWidth||142,h=el.offsetHeight||100;
+ const left=Math.max(8,Math.min(window.innerWidth-w-8,rect.left+rect.width/2-w/2));
+ let top=rect.top-h-10; if(top<8)top=rect.bottom+10;
+ el.style.left=`${left}px`;el.style.top=`${Math.min(top,window.innerHeight-h-8)}px`;
+}
+function showRunTooltip(target){
+ if(!target?.matches?.('.record-dot-hit'))return;
+ const el=runTooltipNode();visibleRunDot=target;
+ const durationText=target.dataset.runTime||'—';const when=target.dataset.runDate||'';
+ const date=new Date(when);const precise=Number.isNaN(date.getTime())?'Unknown date':date.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+ const status=target.dataset.runStatus||'Unknown';
+ el.dataset.status=status;
+ // text nodes only: no HTML from remote Bungie data is inserted into the tooltip.
+ el.replaceChildren();
+ const big=document.createElement('strong');big.textContent=durationText;el.appendChild(big);
+ const ago=document.createElement('span');ago.className='run-tooltip-ago';ago.textContent=relativeRunTime(when);el.appendChild(ago);
+ const dateText=document.createElement('span');dateText.className='run-tooltip-date';dateText.textContent=precise;el.appendChild(dateText);
+ const result=document.createElement('span');result.className='run-tooltip-status';result.textContent=status==='Completed'?'● Completed · View report':status==='Incomplete'?'● Incomplete · View report':'Run details';el.appendChild(result);
+ el.classList.add('visible');moveRunTooltip(target);
+}
+document.addEventListener('pointerover',e=>{const hit=e.target.closest?.('.record-dot-hit');if(hit&&hit!==visibleRunDot)showRunTooltip(hit)});
+document.addEventListener('pointerout',e=>{if(visibleRunDot&&e.target.closest?.('.record-dot-hit')===visibleRunDot&&!visibleRunDot.contains(e.relatedTarget))hideRunTooltip()});
+document.addEventListener('focusin',e=>{if(e.target.matches?.('.record-dot-hit'))showRunTooltip(e.target)});
+document.addEventListener('focusout',e=>{if(e.target.matches?.('.record-dot-hit'))hideRunTooltip()});
+document.addEventListener('click',e=>{if(e.target.closest?.('.record-dot-hit'))hideRunTooltip()});
+window.addEventListener('scroll',()=>{if(visibleRunDot)moveRunTooltip(visibleRunDot)},{passive:true});
+window.addEventListener('resize',()=>{if(visibleRunDot)moveRunTooltip(visibleRunDot)});
+
 function dungeonRows(activities,compact){
  // A record card shows the complete recent sample of run results for its dungeon.
  const byName=new Map(data.map(d=>[d.name,{d,runs:[],clears:[],image:CUSTOM_DUNGEON_IMAGES[d.name]||''}]));
@@ -360,20 +451,24 @@ function dungeonRows(activities,compact){
   const validDate=d=>d?new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
   const times=[latest?.duration,fastest?.duration,avg].map(n=>Number.isFinite(n)?duration(n):'N/A');
   const sorted=[...r.runs].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const timeline=sorted.length?sorted.slice(-20).map((run,i,all)=>{
-   const pos=all.length===1?50:6+i*88/(all.length-1);
-   const vertical=29+Math.sin(i*1.8)*11;
-   const label=`${validDate(run.date)} • ${duration(run.duration)} • ${run.completed?'Completed':'Incomplete'}${run.instanceId?' • View activity report':''}`;
-   const pinStyle=`left:${pos}%;top:${vertical}px`;
+  const sample=sorted.slice(-20);
+  const timeline=sample.length?sample.map((run,i)=>{
+   const label=`${validDate(run.date)} • ${duration(run.duration)} • ${run.completed?'Completed':'Incomplete'}${run.instanceId?' • Open activity report':''}`;
+   const position=`grid-column:${i%10+1};grid-row:${Math.floor(i/10)+1}`;
+   const safeDate=escapeHtml(String(run.date||''));
+   const safeDuration=escapeHtml(duration(run.duration));
+   const safeStatus=run.completed?'Completed':'Incomplete';
+   const shared=`class="record-dot-hit ${run.completed?'complete':'incomplete'}" style="${position}" data-run-time="${safeDuration}" data-run-date="${safeDate}" data-run-status="${safeStatus}" aria-label="${escapeHtml(label)}"`;
    return /^\d{6,25}$/.test(String(run.instanceId||''))
-     ? `<button type="button" class="record-dot record-dot-button ${run.completed?'complete':'incomplete'}" style="${pinStyle}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}" onclick="openActivityReport('${run.instanceId}')"></button>`
-     : `<span class="record-dot ${run.completed?'complete':'incomplete'}" style="${pinStyle}" title="${escapeHtml(label)}"></span>`;
+     ? `<button type="button" ${shared} onclick="hideRunTooltip();openActivityReport('${run.instanceId}')"><span class="record-dot-pip" aria-hidden="true"></span></button>`
+     : `<span ${shared}><span class="record-dot-pip" aria-hidden="true"></span></span>`;
   }).join(''):'<span class="record-chart-empty">No recent runs</span>';
+  const chartClass=sample.length>10?'record-chart dense':'record-chart';
   const image=r.image?`background-image:linear-gradient(0deg,#0a0b1466,#0a0b1415),url('${r.image}')`:'';
   const bestLink=fastest?.instanceId?`<a class="record-bestlink" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(fastest.instanceId)}" target="_blank" rel="noopener noreferrer" title="Open Bungie activity report">${times[1]} ↗</a>`:`<strong>${times[1]}</strong>`;
-  return `<article class="record-tile"><div class="record-tile-cover" data-glyph="${escapeHtml(r.d.symbol)}" style="--c1:${r.d.c1};--c2:${r.d.c2};${image}"><small>${r.d.year} · ${escapeHtml(r.d.place)}</small><h3>${escapeHtml(r.d.name)}</h3></div><div class="record-tile-content"><div class="record-chart-row"><div class="record-chart"><div class="record-chart-line"></div>${timeline}</div><div class="record-total"><strong>${done.length}</strong><span>Recent<br>clears</span></div></div><div class="record-times"><div><strong>${times[0]}</strong><span>Recent</span></div><div>${bestLink}<span>Fastest</span></div><div><strong>${times[2]}</strong><span>Average</span></div></div><div class="record-tile-bottom"><span>${r.runs.length} runs sampled</span><span>${latest?'Last clear: '+escapeHtml(validDate(latest.date)):'No recent clear'}</span></div>${fastest?`<small class="record-tile-meta">Best recent: ${escapeHtml(validDate(fastest.date))}${fastest.instanceId?' · Bungie PGCR available':''}</small>`:''}</div></article>`;
+  return `<article class="record-tile"><div class="record-tile-cover" data-glyph="${escapeHtml(r.d.symbol)}" style="--c1:${r.d.c1};--c2:${r.d.c2};${image}"><small>${r.d.year} · ${escapeHtml(r.d.place)}</small><h3>${escapeHtml(r.d.name)}</h3></div><div class="record-tile-content"><div class="record-chart-row"><div class="${chartClass}"><div class="record-chart-line" aria-hidden="true"></div>${timeline}</div><div class="record-total"><strong>${done.length}</strong><span>Recent<br>clears</span></div></div><div class="record-times"><div><strong>${times[0]}</strong><span>Recent</span></div><div>${bestLink}<span>Fastest</span>${fastest?`<small class="record-best-date">${escapeHtml(validDate(fastest.date))}</small>`:""}</div><div><strong>${times[2]}</strong><span>Average</span></div></div></div></article>`;
  };
- return `<div class="profile-dungeon-gallery">${rows.map(tile).join('')}</div><p class="subnote">Click a green or red dot to open its detailed Bungie-backed run report. Green = completed, red = incomplete. The timeline shows up to 20 of the retrieved runs per dungeon, not a complete lifetime record. Card artwork uses your uploaded custom dungeon images when mapped; otherwise it falls back to Bungie activity art.</p>`;
+ return `<div class="profile-dungeon-gallery">${rows.map(tile).join('')}</div><p class="subnote">Hover or focus a dot to see its time, age, and status. Click to open its Bungie-backed report. Green = completed; red = incomplete. Up to 20 recent runs are shown per dungeon; they are not verified full-dungeon clears.</p>`;
 }
 async function loadAccount(type,id,version,knownAccount){
  try{
