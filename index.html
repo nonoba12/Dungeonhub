@@ -285,6 +285,19 @@ body .record-tile:hover{border-color:var(--accent)}
 @media(max-width:740px){.profilemetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.profilemetrics{grid-template-columns:minmax(0,1fr)}}
 
+
+/* V15: compact home and real-data rankings */
+.home-first-heading{margin-top:0;margin-bottom:19px}.home-first-heading .eyebrow{margin-bottom:8px}
+.real-rank-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 19px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
+.real-guardian-link{display:inline-flex;align-items:center;gap:8px;border:0;background:none;color:var(--text);font-size:12px;font-weight:800;padding:2px 0;text-align:left}
+.real-guardian-link:hover{color:var(--accent);text-decoration:underline}
+.real-rank-source,.live-rank-source{color:#a8d6f0;font-size:11px}
+.real-rank-empty{padding:32px 14px;text-align:center}.real-rank-empty b{display:block;font-size:16px}.real-rank-empty p{color:var(--muted);line-height:1.6;margin:10px 0 18px}
+.real-rank-note{color:#9eaec0;font-size:11px;line-height:1.6;margin:12px 3px 18px}.real-rank-note b{color:#dbe4ed}
+/* Stars belong to the dot, never the gap between two dots; the hit target stays fixed. */
+.record-dot-hit.has-achievement .record-dot-pip{width:15px;height:15px;border-color:#e8f6eb;box-shadow:0 0 0 2px #10121a,0 0 6px #ffffff65}
+.record-dot-hit.has-achievement .record-dot-star{position:absolute;left:50%;top:50%;right:auto;transform:translate(-50%,-54%);font:900 10px/1 Arial,sans-serif;color:#fff!important;filter:drop-shadow(0 1px 1px #07120b);text-shadow:none;pointer-events:none;z-index:2}
+.record-dot-hit.has-achievement:hover .record-dot-star{transform:translate(-50%,-54%);pointer-events:none}
 </style>
 </head>
 <body>
@@ -305,8 +318,10 @@ const data=[
 {name:'Pit of Heresy',year:2019,place:'Moon',seal:'—',exotic:'Xenophage quest',c1:'#6c3231',c2:'#2b292d',symbol:'♢',desc:'Descend beneath the Scarlet Keep.'},
 {name:'The Shattered Throne',year:2018,place:'Dreaming City',seal:'—',exotic:'Wish-Ender quest',c1:'#385b72',c2:'#302747',symbol:'♛',desc:'Strike back at the curse of the Dreaming City.'}
 ];
-const players=[['Astra#1024',582,'12:46',41,18],['Vortex#7781',549,'13:08',37,15],['Nova#3912',520,'13:33',34,13],['Cipher#4580',476,'14:02',33,12],['Echo#2088',431,'14:24',28,11],['Orion#6914',399,'15:11',26,9],['Riven#0042',368,'15:36',22,8],['Ghost#8180',335,'16:02',19,7]];
-let current='overview',metric='clears',filter='all',sort='newest',chosen='Equilibrium',playerName='',profileTab='overview',dungeonFilter='all';
+const TRACKED_LEADERS_KEY='dungeonhub-real-bungie-rankings-v1';
+const RANKING_STARTER_NAMES=['kro#3128','El Cancero#3914']; // Public Bungie Names shown in the user's own reference screenshots.
+let rankingWarmupActive=false,rankingWarmupAttempted=false,rankingWarmupStatus='';
+let current='overview',metric='clears',filter='all',sort='newest',chosen='All Dungeons',playerName='',profileTab='overview',dungeonFilter='all';
 let selectedProfileDungeon='',dungeonStatusFilter='all',dungeonDisplayCount=50;
 let historyScan={active:false,complete:false,cancelled:false,loaded:0,pages:0,doneCharacters:0,totalCharacters:0,issues:[],capped:false};
 const HISTORY_PAGE_SIZE=100,MAX_HISTORY_PAGES=300;
@@ -377,12 +392,105 @@ const activityArt=new Map();
 const icon=(id)=>`<svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-${id}"/></svg>`;
 const format=(n)=>n.toLocaleString('en-US');
 function navigate(page){const target=new URL(location.href);if(page!=='guardian')target.searchParams.delete('profile');if(page!=='dungeonprofile')target.searchParams.delete('dungeon');if(page!=='report')target.searchParams.delete('pgcr');if(location.pathname+location.search!==target.pathname+target.search)history.pushState({},'',target.pathname+target.search+target.hash);current=page;document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active',n.dataset.page===page));document.getElementById('breadcrumb').textContent=({overview:'Overview',dungeons:'All Dungeons',leaderboards:'Leaderboards',profile:'Player Lookup',guardian:'Guardian Profile',history:'Activity History',report:'Activity Report'})[page];window.scrollTo({top:0,behavior:'smooth'});render();}
-function stats(){return `<div class="stats"><div class="stat"><div class="stathead">Available Dungeons <span>${icon('grid')}</span></div><div class="statnum">11</div><div class="statfooter">From 2018 — 2025</div></div><div class="stat"><div class="stathead">Fireteam Size <span>${icon('user')}</span></div><div class="statnum">1—3</div><div class="statfooter">Solo & fireteam challenges</div></div><div class="stat"><div class="stathead">Core Record Types <span>${icon('trophy')}</span></div><div class="statnum">6</div><div class="statfooter">Clears, solos, flawless & more</div></div><div class="stat"><div class="stathead">Data Connection <span>${icon('shield')}</span></div><div class="statnum" style="font-size:24px;color:#f8c98d">Demo</div><div class="statfooter">Bungie API integration pending</div></div></div>`}
 function cards(limit){let list=data.filter(d=>filter==='all'||(filter==='recent'?d.year>=2024:filter==='classic'?d.year<=2021:true));if(sort==='oldest')list=[...list].sort((a,b)=>a.year-b.year);if(sort==='az')list=[...list].sort((a,b)=>a.name.localeCompare(b.name));if(limit)list=list.slice(0,limit);return `<div class="dungeons">${list.map((d)=>{const img=CUSTOM_DUNGEON_IMAGES[d.name]||'';const coverStyle=`--c1:${d.c1};--c2:${d.c2};${img?`background-image:linear-gradient(0deg,#08101a88,#0a0d130d),url('${img}');background-size:cover;background-position:center;`:''}`;return `<article class="dungeon" role="button" tabindex="0" onclick="openDungeon('${d.name.replace(/'/g,"\\'")}')" onkeydown="if(event.key==='Enter')this.click()"><div class="cover" style="${coverStyle}"><span class="year">${d.year}</span><span class="symbol">${d.symbol}</span></div><div class="dungeonbody"><div class="dungeonname">${d.name}</div><div class="destination">${d.place}</div><div class="cardfoot"><div><small>Dungeon seal</small><strong>${d.seal}</strong></div><div style="align-items:end"><small>View records</small><strong class="greentext">Explore ↗</strong></div></div></div></article>`}).join('')}</div>`}
-function leaderboard(){const labels={clears:'Total Clears',speed:'Fastest Clear',solo:'Solo Clears',flawless:'Solo Flawless',sherpas:'Sherpas'};let sorted=[...players];if(metric==='speed')sorted.sort((a,b)=>a[2].localeCompare(b[2]));else if(metric==='solo')sorted.sort((a,b)=>b[3]-a[3]);else if(metric==='flawless')sorted.sort((a,b)=>b[4]-a[4]);else if(metric==='sherpas')sorted.sort((a,b)=>(b[1]/3|0)-(a[1]/3|0));else sorted.sort((a,b)=>b[1]-a[1]);return `<div class="tablepanel"><div class="tabs">${Object.entries(labels).map(([k,v])=>`<button class="tab ${metric===k?'active':''}" onclick="metric='${k}';render()">${v}</button>`).join('')}</div><div style="overflow-x:auto"><table><thead><tr><th>Rank</th><th>Guardian</th><th>${labels[metric]}</th><th class="hide-mobile">Featured Record</th><th class="hide-mobile">Status</th></tr></thead><tbody>${sorted.map((p,i)=>`<tr style="cursor:pointer" onclick="showProfile('${p[0]}')"><td><span class="rank ${i<3?'top':''}">${String(i+1).padStart(2,'0')}</span></td><td><span class="avatar">${p[0][0]}</span><b>${p[0]}</b></td><td><b>${metric==='speed'?p[2]:metric==='solo'?p[3]:metric==='flawless'?p[4]:metric==='sherpas'?Math.floor(p[1]/3):format(p[1])}</b></td><td class="hide-mobile">${data[(i+2)%data.length].name}</td><td class="hide-mobile"><span class="badge">Sample entry</span></td></tr>`).join('')}</tbody></table></div></div><p class="note">Demonstration leaderboard with fictional Guardian names and sample values. Rankings are not pulled from Bungie.</p>`}
-function render(){let out='';if(current==='overview'){out=`<div class="hero"><div><div class="eyebrow">THE DUNGEON ENDGAME, DECODED</div><h1>Every dungeon.<br><em>Every record.</em></h1><p>Explore all Destiny 2 dungeons, compare speedruns, celebrate solo flawless clears, and uncover your Guardian’s dungeon legacy.</p><button class="primary" onclick="navigate('profile')">Search a Guardian ↗</button></div><div class="heroart"><span>✧</span></div></div>${stats()}<div class="sectionhead"><div><h2>Explore Dungeons</h2><p>All 11 dungeons in the Destiny 2 universe</p></div><button class="smalllink" onclick="navigate('dungeons')">View all dungeons →</button></div>${cards(8)}<div class="sectionhead"><div><h2>Guardian Leaderboards</h2><p>Compare records across the dungeon scene</p></div><button class="smalllink" onclick="navigate('leaderboards')">Explore rankings →</button></div>${leaderboard()}`}
+// Local rankings are intentionally not called global leaderboards: we have no shared database.
+// Each entry originates from real Bungie account activity, never a generated sample.
+function readTrackedGuardians(){
+ try{const values=JSON.parse(localStorage.getItem(TRACKED_LEADERS_KEY)||'[]');
+  if(!Array.isArray(values))return [];
+  return values.filter(v=>v&&/^\d{10,25}$/.test(String(v.id||''))&&Number.isFinite(Number(v.type))&&typeof v.name==='string'&&v.name.trim()&&Array.isArray(v.activities)).slice(0,24);
+ }catch{return []}
+}
+function saveTrackedGuardian({account,displayName,activities},source='profile'){
+ if(!account||!activities?.length)return;
+ const id=String(account.membershipId||''),type=Number(account.membershipType);
+ if(!/^\d{10,25}$/.test(id)||!Number.isInteger(type))return;
+ const rows=activities.filter(r=>r&&r.date&&r.instanceId);
+ if(!rows.length)return;
+ const previous=readTrackedGuardians(), old=previous.find(v=>v.id===id&&Number(v.type)===type);
+ if(source==='preview'&&old?.source==='profile')return; // Never replace a complete scan with a short preview.
+ const entries=rows.map(r=>{
+  const match=matchDungeon(r.name||'');
+  const entryCache=verifiedRunCache.get(`${type}:${id}:${String(r.instanceId)}`);
+  return {dungeon:match?.name||'',complete:!!r.completed,duration:Number.isFinite(r.duration)?r.duration:null,
+   kills:Number(r.kills)||0,report:String(r.instanceId),tags:Array.isArray(entryCache?.tags)?entryCache.tags:[],checked:!!entryCache};
+ });
+ const item={id,type,name:String(displayName||old?.name||'Guardian').slice(0,90),source,
+  activities:entries.slice(0,2000),updated:Date.now()};
+ const result=[item,...previous.filter(v=>!(v.id===id&&Number(v.type)===type))].slice(0,16);
+ try{localStorage.setItem(TRACKED_LEADERS_KEY,JSON.stringify(result))}catch{}
+}
+function refreshTrackedGuardianAchievements(){
+ if(!liveProfile||!liveProfile.activities.length)return;
+ saveTrackedGuardian(liveProfile,'profile');
+}
+function rankingMetricSummary(entry,dungeonName){
+ const activities=entry.activities.filter(a=>!dungeonName||dungeonName==='All Dungeons'||a.dungeon===dungeonName);
+ const completed=activities.filter(a=>a.complete);
+ const full=completed.filter(a=>Number.isFinite(a.duration));
+ const solo=completed.filter(a=>a.tags.includes('solo')||a.tags.includes('sf')).length;
+ const sf=completed.filter(a=>a.tags.includes('sf')).length;
+ const kills=activities.reduce((acc,a)=>acc+(Number(a.kills)||0),0);
+ const checked=completed.filter(a=>a.checked).length;
+ const best=full.length?Math.min(...full.map(a=>a.duration)):null;
+ const bestRun=full.find(a=>a.duration===best)||null;
+ return {clears:completed.length,best,kills,solo,sf,checked,recordCount:activities.length,bestRun};
+}
+function openRankedGuardian(type,id){openGuardian(Number(type),String(id),null,null);}
+function refreshRankings(){rankingWarmupAttempted=false;void warmupRealRankings(true)}
+function leaderboard(){
+ const labels={clears:'Completions',speed:'Fastest Recorded',kills:'Dungeon Kills',solo:'Solo (PGCR)',flawless:'Solo Flawless (PGCR)'};
+ const metricName=labels[metric]||labels.clears;
+ const pool=readTrackedGuardians().map(g=>({...g,summary:rankingMetricSummary(g,chosen)}))
+  .filter(g=>g.summary.recordCount>0);
+ pool.sort((a,b)=>metric==='speed'?(a.summary.best??Infinity)-(b.summary.best??Infinity):
+  metric==='solo'?b.summary.solo-a.summary.solo:metric==='flawless'?b.summary.sf-a.summary.sf:
+  metric==='kills'?b.summary.kills-a.summary.kills:b.summary.clears-a.summary.clears);
+ const status=rankingWarmupActive?'Loading real Bungie profiles…':rankingWarmupStatus;
+ const cells=pool.map((g,i)=>{
+  const val=metric==='speed'?(g.summary.best!==null?duration(g.summary.best):'—'):
+   metric==='solo'?(g.summary.checked?formatInt(g.summary.solo):'—'):
+   metric==='flawless'?(g.summary.checked?formatInt(g.summary.sf):'—'):
+   metric==='kills'?formatInt(g.summary.kills):formatInt(g.summary.clears);
+  const name=escapeHtml(g.name); const d=chosen==='All Dungeons'?'All Dungeons':chosen;
+  const kind=g.source==='profile'?'Scanned profile':'Recent Bungie sample';
+  return `<tr><td><span class="rank ${i<3?'top':''}">${String(i+1).padStart(2,'0')}</span></td><td><button type="button" class="real-guardian-link" onclick="openRankedGuardian(${g.type},'${g.id}')"><span class="avatar">${escapeHtml(g.name[0].toUpperCase())}</span>${name} ↗</button></td><td><b>${val}</b></td><td class="hide-mobile">${escapeHtml(d)}</td><td class="hide-mobile"><span class="live-rank-source">${kind}</span></td></tr>`;
+ }).join('');
+ return `<div class="tablepanel real-leaderboard"><div class="tabs">${Object.entries(labels).map(([k,label])=>`<button class="tab ${metric===k?'active':''}" onclick="metric='${k}';render()">${label}</button>`).join('')}</div><div class="real-rank-tools"><span>${pool.length} real Guardian${pool.length===1?'':'s'} indexed in this browser</span><button class="smalllink" onclick="refreshRankings()">Refresh Bungie data ↻</button></div><div style="overflow-x:auto"><table><thead><tr><th>Rank</th><th>Guardian</th><th>${metricName}</th><th class="hide-mobile">Dungeon</th><th class="hide-mobile">Data source</th></tr></thead><tbody>${cells||`<tr><td class="real-rank-empty" colspan="5"><b>${rankingWarmupActive?'Retrieving real Guardians…':'No real dungeon records indexed yet'}</b><p>Search and open Guardian profiles to add their actual Bungie records here. No fictional players or estimated numbers.</p><button class="primary" onclick="navigate('profile')">Find a Guardian →</button></td></tr>`}</tbody></table></div></div><p class="real-rank-note">${status?escapeHtml(status)+' · ':''}Local tracked-profile rankings, <b>not global leaderboards</b>. Completion counts include Bungie-reported checkpoint finishes; times are unverified. Solo badges count only checked activity reports, so unchecked runs may be missing.</p>`;
+}
+async function warmupRealRankings(force=false){
+ if(rankingWarmupActive||(!force&&rankingWarmupAttempted))return;
+ rankingWarmupAttempted=true;rankingWarmupActive=true;rankingWarmupStatus='';
+ if(current==='overview'||current==='leaderboards')render();
+ let successes=0;
+ for(const name of RANKING_STARTER_NAMES){
+  try{
+   if(!force&&readTrackedGuardians().some(g=>g.name.toLowerCase()===name.toLowerCase()))continue;
+   const [stem,code]=name.split('#');
+   const results=await bungie('/Destiny2/SearchDestinyPlayerByBungieName/-1/',{method:'POST',body:JSON.stringify({displayName:stem,displayNameCode:Number(code)})});
+   const account=results?.find(x=>String(x?.membershipId||'').match(/^\d{10,25}$/));if(!account)continue;
+   const type=Number(account.membershipType),id=String(account.membershipId);
+   const profile=await bungie(`/Destiny2/${type}/Profile/${id}/?components=100,200`);
+   const characters=Object.keys(profile?.characters?.data||{}).slice(0,3);
+   const pages=await Promise.all(characters.map(async characterId=>{
+    try{const data=await bungieHistoryPage(type,id,characterId,0);return (data?.activities||[]).map(x=>toHistoryActivity(x,characterId))}catch{return []}
+   }));
+   const activities=pages.flat().filter(a=>a?.date);
+   const hashes=[...new Set(activities.map(a=>a.hash).filter(Boolean))].slice(0,35);
+   for(let i=0;i<hashes.length;i+=5)await Promise.all(hashes.slice(i,i+5).map(getActivityName));
+   for(const a of activities){a.name=activityNames.get(a.hash)||`Dungeon activity (${a.hash})`;}
+   if(activities.length){saveTrackedGuardian({account,displayName:name,activities},'preview');successes++}
+  }catch(e){rankingWarmupStatus='Some Bungie profile previews were unavailable';}
+  if(current==='overview'||current==='leaderboards')render();
+ }
+ rankingWarmupActive=false;
+ if(successes)rankingWarmupStatus=`Loaded ${successes} additional real Bungie profile${successes===1?'':'s'}`;
+ if(current==='overview'||current==='leaderboards')render();
+}
+
+function render(){let out='';if(current==='overview'){out=`<div class="sectionhead home-first-heading"><div><div class="eyebrow">DUNGEONHUB</div><h2>Explore Dungeons</h2><p>All 11 Destiny 2 dungeons</p></div><button class="smalllink" onclick="navigate('dungeons')">View all dungeons →</button></div>${cards(8)}<div class="sectionhead"><div><h2>Tracked Guardian Rankings</h2><p>Actual Bungie accounts · available retrieved activity only</p></div><button class="smalllink" onclick="navigate('leaderboards')">View rankings →</button></div>${leaderboard()}`}
 else if(current==='dungeons'){out=`<div class="eyebrow">THE COMPLETE DIRECTORY</div><div class="sectionhead" style="margin-top:9px"><div><h2 style="font-size:34px">All Dungeons</h2><p>Every Destiny 2 dungeon, newest to oldest</p></div><div class="controls"><select class="select" aria-label="Filter dungeons" onchange="filter=this.value;render()"><option value="all" ${filter==='all'?'selected':''}>All releases</option><option value="recent" ${filter==='recent'?'selected':''}>2024+</option><option value="classic" ${filter==='classic'?'selected':''}>2018–2021</option></select><select class="select" aria-label="Sort dungeons" onchange="sort=this.value;render()"><option value="newest" ${sort==='newest'?'selected':''}>Newest first</option><option value="oldest" ${sort==='oldest'?'selected':''}>Oldest first</option><option value="az" ${sort==='az'?'selected':''}>A to Z</option></select></div></div>${cards()}`}
-else if(current==='leaderboards'){out=`<div class="eyebrow">THE COMPETITIVE EDGE</div><div class="sectionhead" style="margin-top:9px"><div><h2 style="font-size:34px">Dungeon Leaderboards</h2><p>Speedrun times, clears, solo challenges and sherpa records</p></div><select class="select" aria-label="Dungeon filter" onchange="chosen=this.value;render()">${['All Dungeons',...data.map(d=>d.name)].map(n=>`<option ${chosen===n?'selected':''}>${n}</option>`).join('')}</select></div><p class="note">Selected dungeon: ${chosen}. Dataset below is illustrative; dungeon-specific live rankings require a stats backend.</p>${leaderboard()}`}
+else if(current==='leaderboards'){out=`<div class="eyebrow">BUNGIE ACTIVITY DATA</div><div class="sectionhead" style="margin-top:9px"><div><h2 style="font-size:34px">Tracked Guardian Rankings</h2><p>Real profiles with actual retrieved dungeon records — not worldwide rankings</p></div><select class="select" aria-label="Dungeon filter" onchange="chosen=this.value;render()">${['All Dungeons',...data.map(d=>d.name)].map(n=>`<option value="${escapeHtml(n)}" ${chosen===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}</select></div>${leaderboard()}`}
 else if(current==='profile'){out=`<div class="eyebrow">GUARDIAN INTELLIGENCE</div><h1 style="font:700 37px 'Space Grotesk';letter-spacing:-1px">Player lookup</h1><div class="searchcallout"><h2 style="font:700 22px 'Space Grotesk';margin-top:0">Find a Guardian</h2><p style="color:#9aabbd">Type part of a Bungie Name to find matching accounts, or enter a full Name#1234 for direct lookup.</p><form onsubmit="event.preventDefault();showProfile(document.getElementById('playerInput').value)"><input id="playerInput" placeholder="GuardianName or Guardian#1234" value="${escapeHtml(lookupQuery)}" autocomplete="off" oninput="scheduleLookup(this.value)" required><button class="primary" type="submit">Find Player →</button></form><p class="lookup-hint">Select a Guardian below to open their own shareable public profile.</p></div><div id="lookupResults">${lookupResultsHtml()}</div>`}
 else if(current==='guardian'){out=guardianPage()}
 else if(current==='dungeonprofile'){out=dungeonHistoryPage()}
@@ -696,7 +804,7 @@ async function verifyProfileAchievements(version){
  const completed=[...new Map(profile.activities.filter(a=>a.completed&&/^\d{6,25}$/.test(String(a.instanceId))&&matchDungeon(a.name)).map(a=>[String(a.instanceId),a])).values()];
  const todo=completed.filter(run=>!verifiedRunCache.has(cacheKeyForRun(run.instanceId)));
  verifyProgress={active:todo.length>0,checked:completed.length-todo.length,total:completed.length,failed:0};
- if(!todo.length){refreshProfileView();return}
+ if(!todo.length){refreshTrackedGuardianAchievements();refreshProfileView();return}
  let index=0,lastRender=0;
  async function worker(){
   while(index<todo.length){
@@ -714,7 +822,7 @@ async function verifyProfileAchievements(version){
  }
  await Promise.all(Array.from({length:Math.min(3,todo.length)},worker));
  if(version!==requestVersion||generation!==verifyGeneration||liveProfile!==profile)return;
- verifyProgress.active=false;persistVerifiedRunCache();refreshProfileView();
+ verifyProgress.active=false;persistVerifiedRunCache();refreshTrackedGuardianAchievements();refreshProfileView();
 }
 function badgeMarkup(label,kind,fastest){
  if(!fastest?.instanceId)return '';
@@ -738,7 +846,7 @@ function timelineDotsMarkup(runs){
    const award=primaryAchievementForRun(run),awardLabel=({sf:'Solo Flawless',solo:'Solo',flawless:'Flawless'})[award]||'';
    const label=`${date} • ${duration(run.duration)} • ${run.completed?'Completed':'Incomplete'}${awardLabel?' • ★ '+awardLabel:''}${run.instanceId?' • Open activity report':''}`;
    const position=`grid-column:${i%10+1};grid-row:${Math.floor(i/10)+1}`;
-   const shared=`class="record-dot-hit ${run.completed?'complete':'incomplete'}" style="${position}" data-run-time="${escapeHtml(duration(run.duration))}" data-run-date="${escapeHtml(String(run.date||''))}" data-run-status="${run.completed?'Completed':'Incomplete'}" data-run-award="${escapeHtml(awardLabel)}" aria-label="${escapeHtml(label)}"`;
+   const shared=`class="record-dot-hit ${run.completed?'complete':'incomplete'}${award?' has-achievement':''}" style="${position}" data-run-time="${escapeHtml(duration(run.duration))}" data-run-date="${escapeHtml(String(run.date||''))}" data-run-status="${run.completed?'Completed':'Incomplete'}" data-run-award="${escapeHtml(awardLabel)}" aria-label="${escapeHtml(label)}"`;
    const star=award?`<span class="record-dot-star ${award}" aria-hidden="true">★</span>`:'';
    return /^\d{6,25}$/.test(String(run.instanceId||''))
       ?`<button type="button" ${shared} onclick="hideRunTooltip();openActivityReport('${run.instanceId}')"><span class="record-dot-pip" aria-hidden="true"></span>${star}</button>`
@@ -886,6 +994,7 @@ async function loadAccount(type,id,version,knownAccount){
   if(recognized>0)rememberGuardian({name:resolvedName,membershipId:String(id),membershipType:Number(type),statsCount:recognized});
   else{try{const previous=readRecentGuardians().filter(x=>!(x.membershipId===String(id)&&x.membershipType===Number(type)));localStorage.setItem(GUARDIAN_HISTORY_KEY,JSON.stringify(previous))}catch{}}
   historyScan.active=false;historyScan.complete=!historyScan.cancelled&&!historyScan.capped&&!historyScan.issues.length;historyScan.loaded=all.length;
+  if(all.length)saveTrackedGuardian(liveProfile,'profile');
   refreshProfileView();
   if(all.some(a=>a.completed&&matchDungeon(a.name)))void verifyProfileAchievements(version);
  }catch(e){if(version!==requestVersion)return;liveError=e.message||String(e);liveLoading=false;historyScan.active=false;refreshProfileView();}
@@ -1077,5 +1186,5 @@ window.addEventListener('popstate',()=>{
 });
 const startingURL=new URL(location.href);const requestedReport=startingURL.searchParams.get('pgcr');const requestedProfile=startingURL.searchParams.get('profile');
 if(requestedReport&&/^\d{6,25}$/.test(requestedReport))openActivityReport(requestedReport,{skipHistory:true});
-else if(requestedProfile){const match=requestedProfile.match(/^(\d+)-(\d+)$/);if(match)openGuardian(match[1],match[2],null,null,!!startingURL.searchParams.get('dungeon'));else render();}else render();
+else if(requestedProfile){const match=requestedProfile.match(/^(\d+)-(\d+)$/);if(match)openGuardian(match[1],match[2],null,null,!!startingURL.searchParams.get('dungeon'));else render();}else {render();void warmupRealRankings();}
 </script></body></html>
