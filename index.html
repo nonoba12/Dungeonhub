@@ -298,6 +298,31 @@ body .record-tile:hover{border-color:var(--accent)}
 .record-dot-hit.has-achievement .record-dot-pip{width:15px;height:15px;border-color:#e8f6eb;box-shadow:0 0 0 2px #10121a,0 0 6px #ffffff65}
 .record-dot-hit.has-achievement .record-dot-star{position:absolute;left:50%;top:50%;right:auto;transform:translate(-50%,-54%);font:900 10px/1 Arial,sans-serif;color:#fff!important;filter:drop-shadow(0 1px 1px #07120b);text-shadow:none;pointer-events:none;z-index:2}
 .record-dot-hit.has-achievement:hover .record-dot-star{transform:translate(-50%,-54%);pointer-events:none}
+
+/* V18: Dungeon art should be shown cleanly, without generic watermark shapes. */
+.dungeon .cover::before,
+.dungeon .cover::after,
+.dungeon .cover .symbol,
+.dungeon .cover .glyph,
+.dungeon .cover .watermark,
+.record-tile .record-tile-cover::after,
+.record-tile .record-tile-cover .symbol,
+.record-tile .record-tile-cover .glyph,
+.record-tile .record-tile-cover .watermark {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+}
+/* Keep the slight bottom fade on profile cards for title readability. */
+.record-tile .record-tile-cover::before {
+  background: linear-gradient(0deg, rgba(3,8,18,.77), rgba(3,8,18,0) 82%);
+}
+/* V18 compact website credit. */
+.footer{display:flex;justify-content:flex-start;align-items:center;padding:22px 3px 15px;margin-top:30px}
+.footer-credit{display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+.footer-credit strong{font-size:12px;color:var(--text);font-weight:700}
+.footer-credit span{font-size:11px;color:var(--muted)}
+
 </style>
 </head>
 <body>
@@ -480,7 +505,7 @@ function leaderboard(){
    'No completed PGCRs have been indexed for this selection yet.';
  const emptyNote=error?'Check the Worker /leaderboard endpoint and its D1 binding.':
   'Open a Guardian’s completed dungeon activity report to index it through Cloudflare, then refresh here.';
- return `<div class="tablepanel real-leaderboard"><div class="tabs">${Object.entries(SHARED_RANKING_LABELS).map(([k,v])=>`<button class="tab ${metric===k?'active':''}" onclick="metric='${k}';render()">${v}</button>`).join('')}</div><div class="real-rank-tools"><span>${body?results.length+' Guardians in shared rankings':loading?'Loading from Cloudflare D1…':'Cloudflare D1 shared leaderboard'}</span><button class="smalllink" onclick="refreshRankings()">Refresh shared rankings ↻</button></div><div style="overflow-x:auto"><table><thead><tr><th>Rank</th><th>Guardian</th><th>${label}</th><th class="hide-mobile">Dungeon</th></tr></thead><tbody>${rows||`<tr><td class="real-rank-empty" colspan="4"><b>${empty}</b><p>${emptyNote}</p></td></tr>`}</tbody></table></div></div><p class="real-rank-note">Shared Bungie PGCR records saved to Cloudflare D1, visible to every visitor. <b>Not worldwide or lifetime rankings.</b> Only completed reports previously opened through DungeonHub’s Worker are included; checkpoint finishes and unverified times may appear. Solo and flawless rankings require separate verification.</p>`;
+ return `<div class="tablepanel real-leaderboard"><div class="tabs">${Object.entries(SHARED_RANKING_LABELS).map(([k,v])=>`<button class="tab ${metric===k?'active':''}" onclick="metric='${k}';render()">${v}</button>`).join('')}</div><div class="real-rank-tools"><span>${body?results.length+' Guardians in shared rankings':loading?'Loading from Cloudflare D1…':'Cloudflare D1 shared leaderboard'}</span><button class="smalllink" onclick="refreshRankings()">Refresh shared rankings ↻</button></div><div style="overflow-x:auto"><table><thead><tr><th>Rank</th><th>Guardian</th><th>${label}</th><th class="hide-mobile">Dungeon</th></tr></thead><tbody>${rows||`<tr><td class="real-rank-empty" colspan="4"><b>${empty}</b><p>${emptyNote}</p></td></tr>`}</tbody></table></div></div>`;
 }
 async function warmupRealRankings(force=false){
  if(rankingWarmupActive||(!force&&rankingWarmupAttempted))return;
@@ -522,7 +547,7 @@ else if(current==='history'){out=`<div class="eyebrow">RUN BY RUN</div><h1 style
 
 else if(current==='report'){out=reportPage()}
 
-document.getElementById('page').innerHTML=out+`<footer class="footer"><div class="footer-credit"><strong>Developed by kro</strong><span>DungeonHub V17</span><small>Unofficial Destiny 2 fan site · Not affiliated with Bungie</small></div><div class="footer-links"><a href="https://www.bungie.net/7/en/Destiny" target="_blank" rel="noopener noreferrer">Destiny 2</a><a href="https://bungie-net.github.io/" target="_blank" rel="noopener noreferrer">Bungie API</a></div></footer>`}
+document.getElementById('page').innerHTML=out+`<footer class="footer" aria-label="DungeonHub credits"><div class="footer-credit"><strong>Developed by kro</strong><span>DungeonHub V18</span></div></footer>`}
 function duration(seconds){if(!Number.isFinite(seconds))return '—';const s=Math.max(0,Math.floor(seconds));return `${Math.floor(s/3600)?`${Math.floor(s/3600)}:`:''}${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
 function historyTable(activities){if(!activities.length)return '<div class="empty">No recent dungeon activities returned. The Guardian may have a private profile or no accessible records.</div>';return `<div class="tablepanel" style="overflow-x:auto"><table><thead><tr><th>Dungeon activity</th><th>Date</th><th>Duration</th><th>Completion</th><th>Report</th></tr></thead><tbody>${activities.slice(0,100).map(a=>`<tr><td><b>${escapeHtml(a.name)}</b></td><td>${escapeHtml(new Date(a.date).toLocaleDateString())}</td><td>${duration(a.duration)}</td><td>${a.completed?'<span class="badge">Completed</span>':'Incomplete'}</td><td>${a.instanceId?`<a target="_blank" rel="noopener noreferrer" style="color:var(--accent)" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(a.instanceId)}">PGCR ↗</a>`:'—'}</td></tr>`).join('')}</tbody></table></div><p class="note">Displays the newest 100 of the currently retrieved dungeon-mode activities. More historical runs may still be loading; the full activity history is accessible from each dungeon card. Activity names come from Bungie definitions when available. Speedrun rankings and solo-flawless verification are not implemented.</p>`}
 function profile(name){const safe=escapeHtml(name);if(liveLoading)return `<div class="empty"><h2>Looking up ${safe}…</h2><p>Searching Bungie and loading recent dungeon runs for each character.</p></div>`;if(liveError)return `<div class="empty"><h2>Couldn't load ${safe}</h2><p>${escapeHtml(liveError)}</p><p>Confirm that the DungeonHub Cloudflare Worker is deployed and reachable, then try again.</p><button class="primary" onclick="showProfile(playerName)">Retry search ↻</button></div>`;if(!liveProfile)return '<div class="empty">Search with your Bungie Name (example: Guardian#1234).</div>';let a=liveProfile.activities;const completed=a.filter(x=>x.completed);const best=completed.length?duration(Math.min(...completed.map(x=>x.duration).filter(Number.isFinite))):'—';return `<div class="profilehero"><div class="profileicon">${safe.slice(0,1).toUpperCase()}</div><div><h2>${safe}</h2><p>Public Bungie activity data <span class="badge">LIVE API</span></p></div></div><div class="sectionhead"><h2>Recent Dungeon Records</h2></div><div class="detailstats"><div><small>Recent runs fetched</small><b>${a.length}</b></div><div><small>Completed (recent)</small><b>${completed.length}</b></div><div><small>Best recent completion</small><b>${best}</b></div></div><p class="note">Only the most recent 100 dungeon-mode activities per character are requested. These are NOT lifetime totals. Solo, solo-flawless and leaderboards need additional validation and historical indexing.</p><div class="sectionhead"><h2>Recent Bungie dungeon activities</h2><button class="smalllink" onclick="navigate('history')">Activity history →</button></div>${historyTable(a)}`;}
