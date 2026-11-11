@@ -324,7 +324,18 @@ body .record-tile:hover{border-color:var(--accent)}
 .footer-credit span{font-size:11px;color:var(--muted)}
 
 </style>
-</head>
+<style id="v22-pgcr-fixes">
+.pgcr-score-table tbody tr{height:auto;}
+.pgcr-anomaly{padding:16px 20px;margin:14px 0 18px;border:1px solid #b98b43;background:#332918;color:#f6d8a8;border-radius:12px;line-height:1.6}
+.pgcr-anomaly p{margin:6px 0 0;color:#e3cba4}
+.pgcr-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:15px 20px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.pgcr-pagination>div{display:flex;align-items:center;gap:12px}
+.pgcr-pagination button{border:1px solid var(--line);color:var(--text);background:var(--panel2);padding:9px 13px;border-radius:8px}
+.pgcr-pagination button:disabled{opacity:.4;cursor:not-allowed}
+.pgcr-table-scroll{overflow:auto;max-height:min(760px,75vh)}
+.record-total .verified-full-count{display:block;margin-top:7px;font-size:10px;max-width:92px;line-height:1.3;color:var(--muted)}
+.pgcr-score-table thead{position:sticky;top:0;z-index:2}
+</style></head>
 <body>
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg"><symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol><symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4ZM7 6H4v3a4 4 0 0 0 4 4M17 6h3v3a4 4 0 0 1-4 4"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 9 4v6c0 6-4 9-9 11-5-2-9-5-9-11V6z"/><path d="m8 12 3 3 5-6"/></symbol></svg>
 <div class="shell"><aside class="sidebar"><div class="brand" onclick="navigate('overview')"><div class="mark">✦</div><div><strong>Dungeon<span>Hub</span></strong></div></div><div class="navlabel">EXPLORE</div><button class="navitem active" data-page="overview" onclick="navigate('overview')"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-grid"/></svg><span>Overview</span></button><button class="navitem" data-page="dungeons" onclick="navigate('dungeons')"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-shield"/></svg><span>Dungeons</span></button><button class="navitem" data-page="leaderboards" onclick="navigate('leaderboards')"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-trophy"/></svg><span>Leaderboards</span></button><div class="navsep"></div><div class="navlabel">GUARDIANS</div><button class="navitem" data-page="profile" onclick="navigate('profile')"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-user"/></svg><span>Player lookup</span></button><button class="navitem" data-page="history" onclick="navigate('history')"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-clock"/></svg><span>Activity history</span></button><div class="sidebottom"><div class="theme-settings"><button type="button" class="theme-trigger" id="themeTrigger" aria-expanded="false" aria-controls="themeMenu" onclick="toggleThemeMenu()"><span style="font-size:19px" aria-hidden="true">⚙</span><span>Settings<small id="themeLabel">Neon / Lime</small></span><span class="theme-chevron" aria-hidden="true">▴</span></button><div class="theme-menu" id="themeMenu" hidden><div class="theme-menu-head">Website theme</div><div id="themeChoices" class="theme-options"></div><div class="theme-history-area"><button type="button" class="theme-history-clear" onclick="clearStoredGuardianHistory()">✕ Clear recent Guardian searches</button><p class="theme-history-desc" id="historyClearStatus">Only Guardians with retrieved dungeon stats appear in recent search history. Stored on this browser.</p></div></div></div></div></aside>
@@ -535,7 +546,7 @@ else if(current==='history'){out=`<h1 style="font:700 37px 'Space Grotesk'">Dung
 
 else if(current==='report'){out=reportPage()}
 
-document.getElementById('page').innerHTML=out+`<footer class="footer" aria-label="DungeonHub credits"><div class="footer-credit"><strong>Developed by kro</strong><span>DungeonHub V21</span></div></footer>`}
+document.getElementById('page').innerHTML=out+`<footer class="footer" aria-label="DungeonHub credits"><div class="footer-credit"><strong>Developed by kro</strong><span>DungeonHub V22</span></div></footer>`}
 function duration(seconds){if(!Number.isFinite(seconds))return '—';const s=Math.max(0,Math.floor(seconds));return `${Math.floor(s/3600)?`${Math.floor(s/3600)}:`:''}${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
 function historyTable(activities){if(!activities.length)return '<div class="empty">No recent dungeon activities returned. The Guardian may have a private profile or no accessible records.</div>';return `<div class="tablepanel" style="overflow-x:auto"><table><thead><tr><th>Dungeon activity</th><th>Date</th><th>Duration</th><th>Completion</th><th>Report</th></tr></thead><tbody>${activities.slice(0,100).map(a=>`<tr><td><b>${escapeHtml(a.name)}</b></td><td>${escapeHtml(new Date(a.date).toLocaleDateString())}</td><td>${duration(a.duration)}</td><td>${a.completed?'<span class="badge">Completed</span>':'Incomplete'}</td><td>${a.instanceId?`<a target="_blank" rel="noopener noreferrer" style="color:var(--accent)" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(a.instanceId)}">PGCR ↗</a>`:'—'}</td></tr>`).join('')}</tbody></table></div><p class="note">Showing up to 100 recorded runs. More may still be loading. Checkpoint clears may be included.</p>`}
 function profile(name){const safe=escapeHtml(name);if(liveLoading)return `<div class="empty"><h2>Looking up ${safe}…</h2><p>Searching Bungie and loading recent dungeon runs for each character.</p></div>`;if(liveError)return `<div class="empty"><h2>Couldn't load ${safe}</h2><p>${escapeHtml(liveError)}</p><p>Try again in a moment.</p><button class="primary" onclick="showProfile(playerName)">Retry search ↻</button></div>`;if(!liveProfile)return '<div class="empty">Search with your Bungie Name (example: Guardian#1234).</div>';let a=liveProfile.activities;const completed=a.filter(x=>x.completed);const known=completed.filter(confirmedFullStart).filter(x=>Number.isFinite(x.duration)&&x.duration>0);const best=known.length?duration(Math.min(...known.map(x=>x.duration))):'—';return `<div class="profilehero"><div class="profileicon">${safe.slice(0,1).toUpperCase()}</div><div><h2>${safe}</h2><p>Bungie activity</p></div></div><div class="sectionhead"><h2>Recent Dungeon Records</h2></div><div class="detailstats"><div><small>Recent runs fetched</small><b>${a.length}</b></div><div><small>Completed (recent)</small><b>${completed.length}</b></div><div><small>Best PGCR full start</small><b>${best}</b></div></div><p class="note">Recent runs only. This is not a lifetime total.</p><div class="sectionhead"><h2>Recent Bungie dungeon activities</h2><button class="smalllink" onclick="navigate('history')">Activity history →</button></div>${historyTable(a)}`;}
@@ -577,7 +588,7 @@ function openActivityReport(id,{skipHistory=false}={}){
  id=String(id||'');if(!/^\d{6,25}$/.test(id))return;
  const u=new URL(location.href);u.searchParams.set('pgcr',id);
  if(!skipHistory)history.pushState({report:id},'',u.pathname+u.search+u.hash);
- activeReportId=id;reportData=null;reportError='';reportLoading=true;
+ activeReportId=id;reportData=null;reportError='';reportLoading=true;pgcrRowsPage=0;
  const generation=++reportGeneration;
  current='report';document.getElementById('breadcrumb').textContent='Activity Report';
  document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active'));
@@ -629,6 +640,15 @@ function reportWeaponRows(){
   return `<div class="pgcr-weapon"><div class="pgcr-weapon-art">${path?`<img loading="lazy" src="${path}" alt="">`:'✧'}</div><div class="pgcr-weapon-info"><b title="${reportSafe(def.name)}">${reportSafe(def.name)}</b><small>${weapon.players.size} player${weapon.players.size===1?'':'s'}</small></div><div class="pgcr-weapon-kills">${reportNumber(weapon.kills)}<small>kills</small></div></div>`;
  }).join('')}</div>`).join('')}</div><p class="pgcr-data-footnote">Weapon-kill totals don't include every ability or damage source; some weapons can lack identifiers in older reports.</p></section>`;
 }
+const PGCR_ROWS_PER_PAGE=12;
+let pgcrRowsPage=0;
+function changePgcrRowsPage(delta){
+  if(!reportData?.entries?.length)return;
+  const max=Math.max(0,Math.ceil(reportData.entries.length/PGCR_ROWS_PER_PAGE)-1);
+  pgcrRowsPage=Math.min(max,Math.max(0,pgcrRowsPage+delta));
+  render();
+  document.querySelector('.pgcr-panel')?.scrollIntoView({block:'start',behavior:'smooth'});
+}
 function reportPage(){
  const id=activeReportId;
  const back=`<div class="pgcr-toolbar"><button type="button" class="pgcr-back" onclick="returnFromReport()">← Back to ${new URL(location.href).searchParams.has('profile')?'Guardian profile':'DungeonHub'}</button><div class="pgcr-toolbar-right"><span>PGCR #${reportSafe(id)}</span><button class="pill" type="button" onclick="navigator.clipboard?.writeText(location.href).then(()=>{this.textContent='✓ Copied'})">Copy report link</button><a class="pill pgcr-external" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(id)}" target="_blank" rel="noopener noreferrer">View on Bungie.net ↗</a></div></div>`;
@@ -636,6 +656,15 @@ function reportPage(){
  if(reportError)return back+`<div class="pgcr-center"><div class="eyebrow">REPORT UNAVAILABLE</div><h1>Couldn't load this report</h1><p>${reportSafe(reportError)}</p><button class="primary" onclick="openActivityReport('${id}')">Retry report ↻</button><p><a href="https://www.bungie.net/en/PGCR/${encodeURIComponent(id)}" target="_blank" rel="noopener noreferrer" class="pgcr-textlink">Open the original on Bungie.net ↗</a></p></div>`;
  if(!reportData)return back+'<div class="pgcr-center">No activity loaded.</div>';
  const entries=reportData.entries||[];const name=reportActivityName(reportData);
+ const anomalousReport=entries.length>24;
+ const uniquePlayers=new Set(entries.map(e=>{
+   const u=e?.player?.destinyUserInfo;
+   return u?.membershipId&&u?.membershipType ? `${u.membershipType}:${u.membershipId}` : '';
+ }).filter(Boolean));
+ const maxPgcrPage=Math.max(0,Math.ceil(entries.length/PGCR_ROWS_PER_PAGE)-1);
+ pgcrRowsPage=Math.min(maxPgcrPage,pgcrRowsPage);
+ const visibleReportRowsStart=pgcrRowsPage*PGCR_ROWS_PER_PAGE;
+
  const bg=matchDungeonArt(name);
  const allNumbers=entries.map(e=>({e,kills:reportStat(e,'kills'),deaths:reportStat(e,'deaths'),assists:reportStat(e,'assists'),duration:reportStat(e,'timePlayedSeconds'),completed:reportStat(e,'completed')}));
  const sum=(field)=>allNumbers.some(r=>r[field]!==null)?allNumbers.reduce((n,r)=>n+(r[field]||0),0):null;
@@ -647,16 +676,19 @@ function reportPage(){
  const completeLabel=allCompleted?'Completed':someCompleted?'Mixed outcomes':'Incomplete / unverified';
  const killShare=value=>value===null||!totalKills?'—':(value/totalKills*100).toFixed(1)+'%';
  const maxKills=allNumbers.length?Math.max(...allNumbers.map(x=>x.kills||0)):0;
- const totals=[['KILLS',reportNumber(totalKills)],['DEATHS',reportNumber(totalDeaths)],['ASSISTS',reportNumber(totalAssists)],['K/D',totalKills!==null&&totalDeaths!==null?(totalKills/Math.max(totalDeaths,1)).toFixed(2):'—'],['GUARDIANS',reportNumber(entries.length)],['ACTIVITY TIME',overallTime?duration(overallTime):'—']];
- return `${back}<div class="pgcr-hero" style="${bg?`background-image:linear-gradient(90deg,#091018ef,#0b101aa5 60%,#081018d4),url('${bg}')`:''}"><div class="pgcr-hero-label">ACTIVITY REPORT</div><h1>${reportSafe(name)}</h1><div class="pgcr-hero-details"><span>◷ ${reportDate(reportData.period)}</span><span>♙ ${entries.length} Guardians</span><span>⏱ ${overallTime?duration(overallTime):'—'}</span><span class="${allCompleted?'pgcr-completed':'pgcr-incomplete'}">● ${completeLabel}</span></div><div class="pgcr-hero-id">ACTIVITY ID ${reportSafe(id)}</div></div>
- <section class="pgcr-panel"><div class="pgcr-section-top"><div><div class="eyebrow">FIRETEAM</div><h2>Activity summary</h2></div><span class="pgcr-section-hint">Player stats</span></div>
- <div class="pgcr-table-scroll"><table class="pgcr-score-table"><thead><tr><th>Guardian</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>Kill share</th><th>Time played</th></tr></thead><tbody>${allNumbers.map(({e,kills,deaths,assists,duration:played,completed})=>{
+ const totals=[['KILLS',anomalousReport?'—':reportNumber(totalKills)],['DEATHS',anomalousReport?'—':reportNumber(totalDeaths)],['ASSISTS',anomalousReport?'—':reportNumber(totalAssists)],['K/D',anomalousReport?'—':totalKills!==null&&totalDeaths!==null?(totalKills/Math.max(totalDeaths,1)).toFixed(2):'—'],['IDENTIFIED PLAYERS',reportNumber(uniquePlayers.size)],['ACTIVITY TIME',anomalousReport?'—':overallTime?duration(overallTime):'—']];
+ const visibleReportRows=allNumbers.slice(visibleReportRowsStart,visibleReportRowsStart+PGCR_ROWS_PER_PAGE);
+ const pgcrWarning=anomalousReport?`<div class="pgcr-anomaly"><b>Unusual activity report</b><p>Bungie returned ${entries.length.toLocaleString()} entries for this activity. That is not a normal dungeon fireteam. Player totals and completion verification are withheld until the underlying report can be checked. The list below is paginated so the page remains usable.</p></div>`:'';
+ const pgcrPagination=entries.length>PGCR_ROWS_PER_PAGE?`<div class="pgcr-pagination"><span>Entries ${visibleReportRowsStart+1}–${Math.min(entries.length,visibleReportRowsStart+PGCR_ROWS_PER_PAGE)} of ${entries.length.toLocaleString()}</span><div><button type="button" onclick="changePgcrRowsPage(-1)" ${pgcrRowsPage===0?'disabled':''}>Previous</button><span>Page ${pgcrRowsPage+1} / ${maxPgcrPage+1}</span><button type="button" onclick="changePgcrRowsPage(1)" ${pgcrRowsPage===maxPgcrPage?'disabled':''}>Next</button></div></div>`:'';
+ return `${back}<div class="pgcr-hero" style="${bg?`background-image:linear-gradient(90deg,#091018ef,#0b101aa5 60%,#081018d4),url('${bg}')`:''}"><div class="pgcr-hero-label">ACTIVITY REPORT</div><h1>${reportSafe(name)}</h1><div class="pgcr-hero-details"><span>◷ ${reportDate(reportData.period)}</span><span>♙ ${uniquePlayers.size?`${uniquePlayers.size} identified players`:`${entries.length} report entries`}</span><span>⏱ ${overallTime?duration(overallTime):'—'}</span><span class="${allCompleted?'pgcr-completed':'pgcr-incomplete'}">● ${completeLabel}</span></div><div class="pgcr-hero-id">ACTIVITY ID ${reportSafe(id)}</div></div>
+ ${pgcrWarning}<section class="pgcr-panel"><div class="pgcr-section-top"><div><div class="eyebrow">FIRETEAM</div><h2>Activity summary</h2></div><span class="pgcr-section-hint">Player stats</span></div>
+ <div class="pgcr-table-scroll"><table class="pgcr-score-table"><thead><tr><th>Guardian</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>Kill share</th><th>Time played</th></tr></thead><tbody>${visibleReportRows.map(({e,kills,deaths,assists,duration:played,completed})=>{
   const name=reportMemberName(e);const user=e?.player?.destinyUserInfo||{};const type=user.membershipType,id=user.membershipId;
   const profileLink=/^\d+$/.test(String(type||''))&&/^\d+$/.test(String(id||''))?`?profile=${encodeURIComponent(type+'-'+id)}`:null;
   const selected=liveProfile?.account?.membershipId&&String(id)===String(liveProfile.account.membershipId);
   return `<tr class="${selected?'pgcr-selected':''}"><td><div class="pgcr-guardian"><span class="pgcr-guardian-avatar">${reportSafe(name.slice(0,1).toUpperCase())}</span><div class="pgcr-guardian-text">${profileLink?`<a href="${profileLink}">${reportSafe(name)}</a>`:`<b>${reportSafe(name)}</b>`}<small>${reportSafe(e?.player?.characterClass||'Guardian')} ${completed===1?' · Completed':completed===0?' · Incomplete':''}</small></div>${mvp?.e===e&&maxKills>0?'<span class="pgcr-mvp">Top kills</span>':''}</div></td><td class="pgcr-number">${reportNumber(kills)}</td><td class="pgcr-number">${reportNumber(deaths)}</td><td class="pgcr-number">${reportNumber(assists)}</td><td class="pgcr-number">${killShare(kills)}</td><td class="pgcr-number">${played===null?'—':duration(played)}</td></tr>`;
- }).join('')}</tbody></table></div><div class="pgcr-totals">${totals.map(([label,value])=>`<div><strong>${reportSafe(value)}</strong><span>${label}</span></div>`).join('')}</div><div class="pgcr-panel-foot"><span>✦ Activity data from Bungie.net</span><span>${mvp?`Top kills: ${reportSafe(reportMemberName(mvp.e))} (${reportNumber(mvp.kills)})`:''}</span></div></section>
- ${reportWeaponRows()}
+ }).join('')}</tbody></table></div>${pgcrPagination}<div class="pgcr-totals">${totals.map(([label,value])=>`<div><strong>${reportSafe(value)}</strong><span>${label}</span></div>`).join('')}</div><div class="pgcr-panel-foot"><span>✦ Activity data from Bungie.net</span><span>${mvp?`Top kills: ${reportSafe(reportMemberName(mvp.e))} (${reportNumber(mvp.kills)})`:''}</span></div></section>
+ ${anomalousReport?'':reportWeaponRows()}
  <div class="pgcr-caveat">Stats are from Bungie. A checkpoint completion does not count as a verified full clear or speedrun.</div>`;
 }
 
@@ -816,6 +848,7 @@ function verifiedTagsForRun(run){return verifiedRunCache.get(cacheKeyForRun(run.
 function primaryAchievementForRun(run){const tags=verifiedTagsForRun(run);return ['sf','solo','flawless'].find(x=>tags.includes(x))||''}
 function accurateAchievementFromReport(report,run,account){
  const entries=Array.isArray(report?.entries)?report.entries:[];
+ if(entries.length>24)return {tags:[],fullStart:false,status:'anomalous',checked:true};
  const status=report?.activityWasStartedFromBeginning===true?'full_start':
   report?.activityWasStartedFromBeginning===false?'checkpoint':'unknown';
  const memberId=String(account.membershipId),type=String(account.membershipType);
@@ -935,7 +968,8 @@ function dungeonRows(activities,compact){
  if(!rows.length)return `<div class="empty">No recognized dungeon activities found in the recent Bungie activity sample.</div>`;
  const tile=r=>{
   const done=r.clears;
-  const full=done.filter(confirmedFullStart).filter(x=>Number.isFinite(x.duration)&&x.duration>0);
+  const fullStarts=done.filter(confirmedFullStart);
+  const full=fullStarts.filter(x=>Number.isFinite(x.duration)&&x.duration>0);
   const fastest=full.length?full.reduce((best,run)=>run.duration<best.duration?run:best):null;
   const latest=done[0]||null;
   const avg=full.length?full.reduce((t,x)=>t+x.duration,0)/full.length:null;
@@ -964,7 +998,7 @@ const scrubber=canSlide?`<div class="record-timeline-scrubber">
  `<div class="record-timeline-no-slider">${sorted.length?`${sorted.length} run${sorted.length!==1?'s':''} loaded`:'No recent runs'}</div>`;
   const image=r.image?`background-image:linear-gradient(0deg,#0a0b1466,#0a0b1415),url('${r.image}')`:'';
   const bestLink=fastest?.instanceId?`<a class="record-bestlink" href="https://www.bungie.net/en/PGCR/${encodeURIComponent(fastest.instanceId)}" target="_blank" rel="noopener noreferrer" title="Open Bungie activity report">${times[1]} ↗</a>`:`<strong>${times[1]}</strong>`;
-  return `<article class="record-tile"><div class="record-tile-cover" style="--c1:${r.d.c1};--c2:${r.d.c2};${image}"><button type="button" class="record-cover-link" data-profile-dungeon="${escapeHtml(r.d.name)}" aria-label="View ${escapeHtml(r.d.name)} activity history"></button>${tileBadges?`<div class="record-badges">${tileBadges}</div>`:''}<small>${r.d.year} · ${escapeHtml(r.d.place)}</small><h3>${escapeHtml(r.d.name)}</h3></div><div class="record-tile-content"><div class="record-chart-row"><div class="record-timeline" data-timeline-id="${timelineId}"><div class="${chartClass}"><div class="record-chart-line" aria-hidden="true"></div>${timeline}</div>${scrubber}</div><div class="record-total"><strong>${done.length}</strong><span>Recorded<br>completions</span></div></div><div class="record-times"><div><strong>${times[0]}</strong><span>Recent</span></div><div>${bestLink}<span>Best full start</span>${fastest?`<small class="record-best-date">${escapeHtml(validDate(fastest.date))}</small>`:""}</div><div><strong>${times[2]}</strong><span>Full-start avg</span></div></div></div></article>`;
+  return `<article class="record-tile"><div class="record-tile-cover" style="--c1:${r.d.c1};--c2:${r.d.c2};${image}"><button type="button" class="record-cover-link" data-profile-dungeon="${escapeHtml(r.d.name)}" aria-label="View ${escapeHtml(r.d.name)} activity history"></button>${tileBadges?`<div class="record-badges">${tileBadges}</div>`:''}<small>${r.d.year} · ${escapeHtml(r.d.place)}</small><h3>${escapeHtml(r.d.name)}</h3></div><div class="record-tile-content"><div class="record-chart-row"><div class="record-timeline" data-timeline-id="${timelineId}"><div class="${chartClass}"><div class="record-chart-line" aria-hidden="true"></div>${timeline}</div>${scrubber}</div><div class="record-total"><strong>${done.length}</strong><span>Recorded<br>completions</span><small class="verified-full-count">${fullStarts.length} confirmed full starts</small></div></div><div class="record-times"><div><strong>${times[0]}</strong><span>Recent</span></div><div>${bestLink}<span>Best full start</span>${fastest?`<small class="record-best-date">${escapeHtml(validDate(fastest.date))}</small>`:""}</div><div><strong>${times[2]}</strong><span>Full-start avg</span></div></div></div></article>`;
  };
  return `<div class="profile-dungeon-gallery">${rows.map(tile).join('')}</div><p class="subnote">Hover or focus a dot to see its time, age, and status; click for its Bungie-backed report. Drag the slider or use the arrows to browse all currently fetched runs for each dungeon, 20 dots at a time. Green = completed; red = incomplete. Stars and achievement badges are shown only after a Bungie report confirms the run began from the start. Older reports or inaccessible runs may have no star. Recorded completion counts can include checkpoints. Best times and averages only use PGCR-confirmed full starts; this is not official speedrun verification.</p>`;
 }
