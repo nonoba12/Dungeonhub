@@ -1,16 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://dungeonhub.app/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/duality/</loc></url>
   <url><loc>https://dungeonhub.app/dungeons/equilibrium/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/ghosts-of-the-deep/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/grasp-of-avarice/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/pit-of-heresy/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/prophecy/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/spire-of-the-watcher/</loc></url>
   <url><loc>https://dungeonhub.app/dungeons/sundered-doctrine/</loc></url>
+  <url><loc>https://dungeonhub.app/dungeons/the-shattered-throne/</loc></url>
   <url><loc>https://dungeonhub.app/dungeons/vespers-host/</loc></url>
   <url><loc>https://dungeonhub.app/dungeons/warlords-ruin/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/ghosts-of-the-deep/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/spire-of-the-watcher/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/duality/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/grasp-of-avarice/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/prophecy/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/pit-of-heresy/</loc></url>
-  <url><loc>https://dungeonhub.app/dungeons/the-shattered-throne/</loc></url>
+  <url><loc>https://dungeonhub.app/lowmans/</loc></url>
+  <url><loc>https://dungeonhub.app/pantheon/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/crotas-end/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/crown-of-sorrow/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/deep-stone-crypt/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/eater-of-worlds/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/garden-of-salvation/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/kings-fall/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/last-wish/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/leviathan/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/root-of-nightmares/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/salvations-edge/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/scourge-of-the-past/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/spire-of-stars/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/the-desert-perpetual/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/vault-of-glass/</loc></url>
+  <url><loc>https://dungeonhub.app/raids/vow-of-the-disciple/</loc></url>
 </urlset>
