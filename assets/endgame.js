@@ -45,15 +45,22 @@ function egHomeTiles(){return `<div class="eg-category-grid">
 function egRaidCard(r,index,stat){const tones=r.tone;return `<button type="button" class="eg-raid-card" onclick="egOpenRaid(${index})" style="--eg-a:${tones[0]};--eg-b:${tones[1]}">
   <div class="eg-raid-visual"><span>${r.year}</span>${r.legacy?'<b>LEGACY</b>':''}</div>
   <div class="eg-raid-body"><strong>${escapeHtml(r.name)}</strong><small>${escapeHtml(r.place)}</small><div class="eg-raid-foot"><span>${stat||'Raid records'}</span><span>View ↗</span></div></div></button>`}
-function egBrowseRaids(){const list=RAID_CATALOG.map((r,i)=>({r,i})).filter(x=>egRaidFilter==='all'||(egRaidFilter==='legacy'?x.r.legacy:!x.r.legacy));return `<header class="eg-heading"><span class="eyebrow">DESTINY 2 ENDGAME</span><h1>Raids</h1><p>Every currently playable raid, plus vaulted raids with historical records. Open a Guardian to check their raid history.</p></header>
-  <div class="eg-toolbar"><span>${list.length} raid${list.length===1?'':'s'}</span><div><button class="${egRaidFilter==='active'?'active':''}" onclick="egRaidFilter='active';render()">Available (10)</button><button class="${egRaidFilter==='legacy'?'active':''}" onclick="egRaidFilter='legacy';render()">Legacy (5)</button><button class="${egRaidFilter==='all'?'active':''}" onclick="egRaidFilter='all';render()">All (15)</button></div></div>
-  <div class="eg-raid-grid">${list.map(x=>egRaidCard(x.r,x.i)).join('')}</div>
-  ${egExploreCTA('Search a Guardian to view their raid clears, recent activity and lowman reports.')}`}
+function egBrowseRaids(){
+ const list=RAID_CATALOG.map((r,i)=>({r,i})).filter(x=>egRaidFilter==='all'||(egRaidFilter==='legacy'?x.r.legacy:!x.r.legacy));
+ const mock=list.map(({r,i})=>egCardShell({name:r.name,year:r.year,place:r.place,tone:r.tone,legacy:r.legacy,key:'raid-'+r.slug,runs:[],onOpen:`egOpenRaid(${i})`,tag:r.legacy?'Legacy raid':'Raid',emptyText:'Find a Guardian to see run history'})).join('');
+ return `<header class="eg-heading"><span class="eyebrow">DESTINY 2 ENDGAME</span><h1>Raids</h1><p>Browse raids in the same layout as dungeon records. Open a Guardian profile for real run timelines, completion counts, and report-backed full starts.</p></header>
+ <div class="eg-toolbar"><span>${list.length} raids</span><div><button class="${egRaidFilter==='active'?'active':''}" onclick="egRaidFilter='active';render()">Available (10)</button><button class="${egRaidFilter==='legacy'?'active':''}" onclick="egRaidFilter='legacy';render()">Legacy (5)</button><button class="${egRaidFilter==='all'?'active':''}" onclick="egRaidFilter='all';render()">All (15)</button></div></div>
+ <div class="profile-dungeon-gallery">${mock}</div>${egExploreCTA('Select a Guardian to populate raid cards with actual run timelines and stats.')}`;
+}
 function egExploreCTA(description){return `<div class="eg-cta"><div><strong>View your Guardian's endgame stats</strong><p>${escapeHtml(description)}</p></div><button class="primary" onclick="navigate('profile')">Find a Guardian ↗</button></div>`}
-function egBrowsePantheon(){return `<header class="eg-heading"><span class="eyebrow">RAID GAUNTLETS</span><h1>Pantheon</h1><p>Track Pantheon activities returned by Bungie's public activity history. Includes the original 2024 event and the permanent 2026 challenges.</p></header>
- <div class="eg-feature-hero eg-pantheon-hero"><strong>Pantheon Activity Records</strong><p>See dates, completion status, duration and individual Bungie reports on a Guardian's profile.</p><button class="primary" onclick="navigate('profile')">Find a Guardian ↗</button></div>
- <div class="eg-pantheon-grid">${PANTHEON_VARIANTS.map(x=>`<div class="eg-info-card"><strong>${escapeHtml(x.name)}</strong><p>${escapeHtml(x.detail)}</p></div>`).join('')}</div>
- <p class="note">Pantheon is identified from Bungie's published activity names. Older or unavailable records may be missing from API history; this is not a historical all-time index.</p>`}
+function egBrowsePantheon(){
+ const groups=egPantheonGroups();
+ const tiles=groups.map(g=>egCardShell({...g,key:'pantheon-'+g.key,runs:[],onOpen:"navigate('profile')",tag:'Pantheon',emptyText:'Find a Guardian to see recorded runs'})).join('');
+ return `<header class="eg-heading"><span class="eyebrow">RAID GAUNTLETS</span><h1>Pantheon</h1><p>Activity history, times, and linked reports for the Pantheon boss gauntlets. Guardian cards show only reports accessible through Bungie.</p></header>
+ <div class="profile-dungeon-gallery">${tiles}</div>
+ ${egExploreCTA('Open a Guardian and select Pantheon to see real activity timelines.')}
+ <p class="subnote">Pantheon activity classification is based on Bungie activity names and dates. Unavailable history is not counted as a failure or an all-time zero.</p>`;
+}
 function egBrowseLowmans(){return `<header class="eg-heading"><span class="eyebrow">SMALL FIRETEAMS</span><h1>Lowmans</h1><p>Find recorded raid clears by solo, duo and trio fireteams. A full-run badge requires a PGCR showing completion, a small fireteam and an explicit fresh-start flag.</p></header>
  <div class="eg-lowman-grid">${[['SOLO','1 Guardian','Full-start raid completions with one recorded participant'],['DUO','2 Guardians','Full-start raid completions with two recorded participants'],['TRIO','3 Guardians','Full-start raid completions with three recorded participants']].map(([k,t,d])=>`<div class="eg-info-card"><span class="eg-pill">${k}</span><strong>${t}</strong><p>${d}</p></div>`).join('')}</div>
  ${egExploreCTA('Open any public Guardian, choose Lowmans, and inspect the linked PGCRs.')}
@@ -62,8 +69,8 @@ function egOpenRaid(i){if(!RAID_CATALOG[i])return;egSelectedRaidSlug=RAID_CATALO
 function egRenderRaidDetail(){const r=RAID_CATALOG.find(x=>x.slug===egSelectedRaidSlug);if(!r)return egBrowseRaids();const i=RAID_CATALOG.indexOf(r);
  return `<button class="eg-back" onclick="navigate('raids')">← All raids</button><div class="eg-detail-hero" style="--eg-a:${r.tone[0]};--eg-b:${r.tone[1]}"><span class="eyebrow">${r.legacy?'LEGACY RAID':'RAID RECORDS'}</span><h1>${escapeHtml(r.name)}</h1><p>${escapeHtml(r.place)} · ${r.year}${r.seal?' · '+escapeHtml(r.seal):''}</p></div>
  <div class="eg-info-card"><strong>Raid activity tracking</strong><p>Search for a Bungie Name to see runs, completions and PGCRs for this raid. Lowman verification is based on full-start reports where available.</p><button class="primary" onclick="navigate('profile')">Find a Guardian ↗</button></div>`}
-function egResetRaidState(){egRaidState={key:'',loading:false,loaded:false,complete:false,more:false,checking:false,checked:0,error:'',pages:0,activities:[],reportInfo:new Map(),nextPages:{},ended:{},autoVersion:egRaidState.autoVersion+1};egProfileRaid='all'}
-function egSetProfileTab(tab){profileTab=tab;egProfileRaid='all';render();if(['raids','pantheon','lowmans'].includes(tab))void egLoadRaidHistory()}
+function egResetRaidState(){egRaidState={key:'',loading:false,loaded:false,complete:false,more:false,checking:false,checked:0,error:'',pages:0,activities:[],reportInfo:new Map(),nextPages:{},ended:{},autoVersion:egRaidState.autoVersion+1};egProfileRaid='all';egTimelineOffsets.clear();egAutoCheckedTabs.clear()}
+function egSetProfileTab(tab){profileTab=tab;egProfileRaid='all';render();if(['raids','pantheon','lowmans'].includes(tab)){void egLoadRaidHistory();if(egRaidState.loaded)void egAutoVerifyForTab(tab)}}
 function egTabButton(tab,title){return `<button class="${profileTab===tab?'selected':''}" onclick="egSetProfileTab('${tab}')">${title}</button>`}
 function egProfileTeaser(){const count=egRaidState.key&&liveProfile&&egRaidState.key===`${liveProfile.account.membershipType}:${liveProfile.account.membershipId}`?egRaidState.activities.length:null;return `<div class="eg-profile-teaser"><span>Also tracking raids, Pantheon and lowman reports</span><button onclick="egSetProfileTab('raids')">${count===null?'Load raid stats':count+' raid activities'} ↗</button><button onclick="egSetProfileTab('lowmans')">Lowmans ↗</button></div>`}
 function egStatus(){if(egRaidState.loading)return 'Loading Bungie raid activity…';if(egRaidState.error)return `Partial results: ${egRaidState.error}`;if(egRaidState.loaded)return `${egRaidState.activities.length} recorded raid/Pantheon activities retrieved`;return 'Raid history not loaded yet'}
@@ -80,14 +87,22 @@ function egProfilePanel(kind){if(!liveProfile)return '<div class="empty">Open a 
  if(egRaidState.error)html+=`<p class="eg-alert">${escapeHtml(egRaidState.error)}</p>`;
  if(!egRaidState.loaded&&!egRaidState.loading){html+=`<div class="eg-empty-panel"><p>Fetch raid and Pantheon activity history from Bungie for this Guardian. Nothing will change in the dungeon statistics.</p><button class="primary" onclick="egLoadRaidHistory()">Load raid data ↗</button></div>`;return html}
  if(kind==='raids'){
-  html+=`<div class="eg-metrics">${egMetaBox('Recorded activities',formatInt(runs.length),'Available raid history')}${egMetaBox('Completed activities',formatInt(completed.length),'Checkpoint clears may count')}${egMetaBox('Raid kills',formatInt(runs.reduce((n,x)=>n+x.kills,0)),'In retrieved raid activities')}${egMetaBox('Lowmans verified',formatInt(lowmans.length),'Fresh-start PGCR only')}</div>`;
-  const totals=RAID_CATALOG.map((r,i)=>({r,i,runs:runs.filter(x=>egMatchRaid(x.name)?.slug===r.slug)}));
-  html+=`<div class="eg-profile-raid-grid">${totals.map(({r,i,runs})=>`<button class="eg-profile-raid ${egProfileRaid===r.slug?'selected':''}" onclick="egProfileRaid=egProfileRaid==='${r.slug}'?'all':'${r.slug}';render()"><b>${escapeHtml(r.name)}</b><span>${runs.filter(x=>x.completed).length} completed · ${runs.length} recorded</span></button>`).join('')}</div>`;
-  const shown=egProfileRaid==='all'?runs:runs.filter(x=>egMatchRaid(x.name)?.slug===egProfileRaid);
-  html+=`<div class="eg-section-label">${egProfileRaid==='all'?'Raid activity history':escapeHtml(RAID_CATALOG.find(x=>x.slug===egProfileRaid)?.name||'Raid')} · ${shown.length} runs</div>${egRunTable(shown)}`;
+  const groups=RAID_CATALOG.map(r=>({...r,key:'raid-'+r.slug,runs:runs.filter(x=>egMatchRaid(x.name)?.slug===r.slug)}));
+  html+=`<div class="eg-metrics">${egMetaBox('Raid activities',formatInt(runs.length),'Retrieved from Bungie')}${egMetaBox('Completions',formatInt(completed.length),'Includes checkpoints')}${egMetaBox('Raid kills',formatInt(runs.reduce((n,x)=>n+(x.kills||0),0)),'Retrieved activities')}${egMetaBox('PGCRs checked',formatInt(egRaidState.reportInfo.size),'Verification is limited')}</div>`;
+  html+=egLegend()+egCheckToolbar();
+  const shown=egProfileRaid==='all'?groups:groups.filter(x=>x.slug===egProfileRaid);
+  html+=`<div class="eg-toolbar"><span>Raid records</span><select class="select" aria-label="Filter raids" onchange="egProfileRaid=this.value;render()"><option value="all" ${egProfileRaid==='all'?'selected':''}>All raids</option>${RAID_CATALOG.map(r=>`<option value="${r.slug}" ${egProfileRaid===r.slug?'selected':''}>${escapeHtml(r.name)}</option>`).join('')}</select></div>`;
+  html+=`<div class="profile-dungeon-gallery">${shown.map(g=>egCardShell({...g,onOpen:`egFilterRaid('${g.slug}')`,tag:g.legacy?'Legacy raid':'Raid'})).join('')}</div>`;
+  const listed=egProfileRaid==='all'?runs:runs.filter(x=>egMatchRaid(x.name)?.slug===egProfileRaid);
+  html+=`<div class="eg-section-label">${egProfileRaid==='all'?'Recent raid activity':escapeHtml(RAID_CATALOG.find(x=>x.slug===egProfileRaid)?.name||'Raid')} (${listed.length})</div>${egRunTable(listed)}`;
  }else if(kind==='pantheon'){
-  html+=`<div class="eg-metrics">${egMetaBox('Pantheon activities',formatInt(runs.length),'Detected by Bungie activity name')}${egMetaBox('Completions',formatInt(completed.length),'May include checkpoint clears')}${egMetaBox('Kills',formatInt(runs.reduce((n,x)=>n+x.kills,0)),'In retrieved Pantheon reports')}</div><div class="eg-section-label">Pantheon activity history</div>${egRunTable(runs)}`;
-  html+=`<p class="note">Pantheon may not be included in the Raid mode history filter. DungeonHub also checks recent unfiltered activities, but cannot guarantee complete 2024 or 2026 records.</p>`;
+  const groups=egPantheonGroups();
+  const grouped=groups.map(g=>({...g,key:'pantheon-'+g.key,runs:runs.filter(x=>egPantheonKey(x)===g.key)}));
+  html+=`<div class="eg-metrics">${egMetaBox('Pantheon activities',formatInt(runs.length),'Retrieved from Bungie')}${egMetaBox('Completions',formatInt(completed.length),'Includes checkpoints')}${egMetaBox('Kills',formatInt(runs.reduce((n,x)=>n+(x.kills||0),0)),'Retrieved activities')}${egMetaBox('PGCRs checked',formatInt(egRaidState.reportInfo.size),'Verification is limited')}</div>`;
+  html+=egLegend()+egCheckToolbar();
+  html+=`<div class="profile-dungeon-gallery">${grouped.map(g=>egCardShell({...g,onOpen:'egScrollToPantheonTable()'})).join('')}</div>`;
+  html+=`<div class="eg-section-label" id="pantheon-activity-table">Pantheon activity history (${runs.length})</div>${egRunTable(runs)}`;
+  html+=`<p class="note">Pantheon is discovered from activity names in accessible Bungie history. The 2024 event may be absent from newer API history. No unverified achievements are asserted.</p>`;
  }else{
   const candidates=completed.filter(x=>{const inf=egReportStatus(x);return inf?.candidate || (!inf&&Number(x.playerCount)>0&&Number(x.playerCount)<=3)});
   html+=`<div class="eg-metrics">${egMetaBox('Verified full-start',formatInt(lowmans.length),'PGCR-confirmed lowmans')}${egMetaBox('Solo',formatInt(lowmans.filter(x=>x.info.size===1).length),'1 participant')}${egMetaBox('Duo',formatInt(lowmans.filter(x=>x.info.size===2).length),'2 participants')}${egMetaBox('Trio',formatInt(lowmans.filter(x=>x.info.size===3).length),'3 participants')}</div>`;
@@ -133,12 +148,12 @@ async function egLoadRaidHistory(more=false){if(!liveProfile||egRaidState.loadin
  const collection=[...byId.values()];
  const hashes=[...new Set(collection.filter(a=>!a.name||a.name.startsWith('Activity ')).map(x=>x.hash).filter(Boolean))];
  for(let i=0;i<hashes.length;i+=4){if(version!==egRaidState.autoVersion)return;await Promise.all(hashes.slice(i,i+4).map(h=>getActivityName(h)))}
- for(const a of collection){a.name=activityNames.get(a.hash)||`Activity ${a.hash}`;a.category=egIsPantheon(a.name)?'pantheon':egMatchRaid(a.name)?'raid':'unknown'}
+ for(const a of collection){a.name=activityNames.get(a.hash)||activityNames.get(a.directorHash)||`Activity ${a.hash}`;a.image=activityArt.get(a.hash)||activityArt.get(a.directorHash)||'';a.category=egIsPantheon(a.name)?'pantheon':egMatchRaid(a.name)?'raid':'unknown'}
  egRaidState.activities=collection.filter(x=>x.category==='raid'||x.category==='pantheon').sort((a,b)=>new Date(b.date)-new Date(a.date));
  egRaidState.loaded=true;egRaidState.more=characters.some(c=>!egRaidState.ended[c.characterId]);
  if(egRaidState.activities.length&&typeof rememberGuardian==='function')rememberGuardian({name:liveProfile.displayName,membershipId:String(id),membershipType:Number(type),statsCount:egRaidState.activities.length});
  if(issues.length)egRaidState.error=issues.slice(0,3).join(' · ');
- }catch(e){egRaidState.error=String(e.message||e)}finally{if(version===egRaidState.autoVersion){egRaidState.loading=false;if(current==='guardian')render()}}
+ }catch(e){egRaidState.error=String(e.message||e)}finally{if(version===egRaidState.autoVersion){egRaidState.loading=false;if(current==='guardian')render();if(egRaidState.loaded&&['raids','pantheon'].includes(profileTab))void egAutoVerifyForTab(profileTab)}}
 }
 async function egVerifyLowmans(){if(!liveProfile||egRaidState.checking)return;const account=liveProfile.account;const key=`${account.membershipType}:${account.membershipId}`;if(egRaidState.key!==key)return;
  const candidates=egRaidState.activities.filter(x=>x.category==='raid'&&x.completed&&!egRaidState.reportInfo.has(x.instanceId))
@@ -152,16 +167,156 @@ async function egVerifyLowmans(){if(!liveProfile||egRaidState.checking)return;co
  }}
  await Promise.all([next(),next()]);egRaidState.checking=false;if(version===egRaidState.autoVersion&&current==='guardian')render();
 }
-function egClassifyLowman(raw,account){const pgcr=raw?.Response||raw||{};const entries=Array.isArray(pgcr.entries)?pgcr.entries:[];
- if(entries.length===0||entries.length>12)return {verified:false,candidate:false,label:'Anomalous report'};
+function egClassifyLowman(raw,account){
+ const pgcr=raw?.Response||raw||{};
+ const entries=Array.isArray(pgcr.entries)?pgcr.entries:[];
+ if(!entries.length||entries.length>24)return {verified:false,candidate:false,outcome:'unknown',label:'Report unavailable'};
  const ids=new Set(entries.map(e=>{const u=e?.player?.destinyUserInfo;return u?.membershipId?`${u.membershipType}:${u.membershipId}`:''}).filter(Boolean));
- const size=ids.size;if(size<1||size>6)return {verified:false,candidate:false,label:'Invalid fireteam size'};
- const member=entries.filter(e=>String(e?.player?.destinyUserInfo?.membershipId||'')===String(account.membershipId));
- if(!member.some(e=>Number(e?.values?.completed?.basic?.value)===1))return {verified:false,candidate:false,label:'Guardian did not complete'};
- if(size>3)return {verified:false,candidate:false,label:`${size}-Guardian fireteam`,size};
+ const size=ids.size;
+ const matching=entries.filter(e=>String(e?.player?.destinyUserInfo?.membershipId||'')===String(account.membershipId));
+ if(!matching.length)return {verified:false,candidate:false,outcome:'unknown',label:'Guardian not found in report',size};
+ const finished=matching.some(e=>Number(e?.values?.completed?.basic?.value)===1);
  const start=pgcr.activityWasStartedFromBeginning;
+ const fullStart=finished&&start===true;
+ const checkpoint=finished&&start===false;
+ const soloOrSmall=size>0&&size<=3;
  const flawless=entries.every(e=>Number(e?.values?.deaths?.basic?.value)===0);
- const label=({1:'Solo',2:'Duo',3:'Trio'})[size];
- if(start===true)return {verified:true,candidate:false,label,size,flawless};
- return {verified:false,candidate:true,label:`${label} ${start===false?'checkpoint':'start unknown'}`,size,flawless};
+ const label=({1:'Solo',2:'Duo',3:'Trio'})[size]||`${size}-player`;
+ return {outcome:finished?'completed':'incomplete',completed:finished,fullStart,checkpoint,size,flawless,
+  verified:fullStart&&soloOrSmall,candidate:finished&&soloOrSmall&&!fullStart,
+  label:fullStart&&soloOrSmall?label:finished&&soloOrSmall?`${label} ${checkpoint?'checkpoint':'start unknown'}`:finished?'Completed':'Incomplete'};
 }
+
+/* V28: One shared presentation component for Raids + Pantheon.
+ * Data is never invented; only retrieved activities populate counters.
+ */
+const EG_V28_WINDOW=20;
+const egTimelineOffsets=new Map();
+const egAutoCheckedTabs=new Set();
+const EG_V28_PANTHEON=[
+ {key:'atraks',name:'Atraks Sovereign',year:2024,place:'Pantheon · 2024',tone:['#434a87','#1b233d']},
+ {key:'oryx',name:'Oryx Exalted',year:2024,place:'Pantheon · 2024',tone:['#61436c','#262344']},
+ {key:'rhulk',name:'Rhulk Indomitable',year:2024,place:'Pantheon · 2024',tone:['#644b6c','#283350']},
+ {key:'nezarec',name:'Nezarec Sublime',year:2024,place:'Pantheon · 2024',tone:['#6a4266','#241b44']},
+ {key:'new',name:'Pantheon · 2026',year:2026,place:'Pantheon · 2026',tone:['#304d7a','#25254e']},
+ {key:'other',name:'Other Pantheon',year:2024,place:'Additional Bungie activities',tone:['#394d63','#272b4c']}
+];
+function egPantheonGroups(){return EG_V28_PANTHEON;}
+function egPantheonKey(a){
+ const name=egNorm(a.name);const year=new Date(a.date).getUTCFullYear();
+ if(year>=2026)return 'new';
+ if(name.includes('atraks sovereign'))return 'atraks';
+ if(name.includes('oryx exalted'))return 'oryx';
+ if(name.includes('rhulk indomitable'))return 'rhulk';
+ if(name.includes('nezarec sublime'))return 'nezarec';
+ return 'other';
+}
+function egLegend(){return `<div class="run-status-legend"><span class="legend-item"><i class="legend-dot" style="--dot:#4fc975"></i>Completed</span><span class="legend-item"><i class="legend-dot" style="--dot:#f0ac42"></i>Checkpoint completion</span><span class="legend-item"><i class="legend-dot" style="--dot:#ff625f"></i>PGCR-confirmed incomplete</span><span class="legend-item"><i class="legend-dot" style="--dot:#8794aa"></i>Not yet confirmed</span></div>`;}
+function egFilterRaid(slug){egProfileRaid=egProfileRaid===slug?'all':slug;render();}
+function egScrollToPantheonTable(){document.getElementById('pantheon-activity-table')?.scrollIntoView({behavior:'smooth',block:'start'});}
+function egDotState(r){
+ const inf=egReportStatus(r);
+ if(inf?.outcome==='incomplete')return 'incomplete';
+ if(inf?.checkpoint)return 'checkpoint';
+ if(inf?.outcome==='completed'||r.completed)return 'complete';
+ return 'unknown';
+}
+function egDotLabel(r){const state=egDotState(r);return state==='checkpoint'?'Checkpoint completion':state==='incomplete'?'PGCR-confirmed incomplete':state==='complete'?'Completed activity':'Not yet PGCR-confirmed';}
+function egDots(runs){
+ if(!runs.length)return '<span class="record-chart-empty">No runs retrieved</span>';
+ return runs.map((r,i)=>{
+  const stamp=String(r.date||'');
+  const status=egDotState(r),info=egReportStatus(r);
+  const label=`${egDotLabel(r)} · ${duration(r.duration)} · ${scanHistoryDate(stamp)} · Open report`;
+  const date=escapeHtml(stamp);
+  return `<button type="button" class="record-dot-hit ${status}" style="grid-column:${i%10+1};grid-row:${Math.floor(i/10)+1}" aria-label="${escapeHtml(label)}" data-run-time="${escapeHtml(duration(r.duration))}" data-run-date="${date}" data-run-status="${egDotLabel(r)}" data-run-class="${info?.fullStart?'Confirmed full start':info?.checkpoint?'Started at checkpoint':'Start not verified'}" data-run-award="${info?.verified?escapeHtml(info.label):''}" onclick="hideRunTooltip();openActivityReport('${String(r.instanceId).replace(/[^0-9]/g,'')}')"><span class="record-dot-pip"></span>${info?.verified?'<span class="eg-run-star" aria-hidden="true">★</span>':''}</button>`;
+ }).join('');
+}
+function egRenderTimeline(chart,sorted,key){
+ const max=Math.max(0,sorted.length-EG_V28_WINDOW);
+ const from=Math.max(0,Math.min(max,Number(chart.dataset.offset)||0));
+ chart.classList.toggle('dense',Math.min(EG_V28_WINDOW,sorted.length-from)>10);
+ chart.innerHTML=`<div class="record-chart-line" aria-hidden="true"></div>${egDots(sorted.slice(from,from+EG_V28_WINDOW))}`;
+ const parent=chart.closest('.record-timeline');
+ const txt=parent?.querySelector('.record-timeline-count');
+ if(txt)txt.textContent=`${from+1}–${Math.min(sorted.length,from+EG_V28_WINDOW)} / ${sorted.length}`;
+ const older=parent?.querySelector('[data-eg-step="older"]');
+ const newer=parent?.querySelector('[data-eg-step="newer"]');
+ if(older)older.disabled=from===0;if(newer)newer.disabled=from===max;
+ const slider=parent?.querySelector('.eg-timeline-range');if(slider)slider.value=from;
+}
+function egSeek(input){
+ const wrapper=input.closest('.record-timeline');if(!wrapper)return;
+ const key=wrapper.dataset.egKey;
+ const runs=egTimelineData.get(key)||[];
+ const from=Number(input.value)||0;
+ egTimelineOffsets.set(key,from);
+ const chart=wrapper.querySelector('.record-chart');chart.dataset.offset=String(from);
+ egRenderTimeline(chart,runs,key);
+ if(typeof hideRunTooltip==='function')hideRunTooltip();
+}
+function egStep(btn,n){const slider=btn.closest('.record-timeline')?.querySelector('.eg-timeline-range');if(!slider)return;slider.value=Math.max(0,Math.min(Number(slider.max),Number(slider.value)+n));egSeek(slider);}
+const egTimelineData=new Map();
+function egTimeline(key,runs){
+ const sorted=[...runs].sort((a,b)=>new Date(a.date)-new Date(b.date));
+ egTimelineData.set(key,sorted);
+ const max=Math.max(0,sorted.length-EG_V28_WINDOW);
+ const from=Math.max(0,Math.min(max,egTimelineOffsets.has(key)?egTimelineOffsets.get(key):max));
+ const sample=sorted.slice(from,from+EG_V28_WINDOW);
+ const range=sorted.length>EG_V28_WINDOW?`<div class="record-timeline-scrubber"><button type="button" class="record-timeline-step" data-eg-step="older" onclick="egStep(this,-10)" ${from===0?'disabled':''} aria-label="Earlier runs">‹</button><input class="record-timeline-range eg-timeline-range" type="range" min="0" max="${max}" value="${from}" oninput="egSeek(this)" aria-label="Browse run history"><button type="button" class="record-timeline-step" data-eg-step="newer" onclick="egStep(this,10)" ${from===max?'disabled':''} aria-label="Later runs">›</button></div><div class="record-timeline-caption"><span>Older ← → Newer</span><span class="record-timeline-count">${from+1}–${Math.min(sorted.length,from+EG_V28_WINDOW)} / ${sorted.length}</span></div>`:`<div class="record-timeline-no-slider">${sorted.length?`${sorted.length} run${sorted.length===1?'':'s'} loaded`:'No runs loaded'}</div>`;
+ return `<div class="record-timeline" data-eg-key="${key}"><div class="record-chart ${sample.length>10?'dense':''}" data-offset="${from}"><div class="record-chart-line" aria-hidden="true"></div>${egDots(sample)}</div>${range}</div>`;
+}
+function egCardShell({name,year,place,tone=['#32445f','#1f283e'],key,runs=[],onOpen,tag,emptyText='No recorded runs'}){
+ const finished=runs.filter(r=>r.completed);
+ const verified=finished.filter(r=>egReportStatus(r)?.fullStart&&Number.isFinite(r.duration)&&r.duration>0);
+ const fastest=verified.length?verified.reduce((best,x)=>x.duration<best.duration?x:best):null;
+ const recent=[...finished].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+ const avg=verified.length?verified.reduce((t,r)=>t+r.duration,0)/verified.length:null;
+ const bestLowman=finished.filter(r=>egReportStatus(r)?.verified).sort((a,b)=>a.duration-b.duration)[0];
+ const badge=bestLowman?`<button class="record-badge sf" onclick="event.stopPropagation();openActivityReport('${bestLowman.instanceId}')" title="Open fastest PGCR-confirmed ${escapeHtml(egReportStatus(bestLowman).label)}"><span>★ ${escapeHtml(egReportStatus(bestLowman).label)} ↗</span></button>`:`<span class="record-badge eg-generic-badge">${escapeHtml(tag||'Pantheon')}</span>`;
+ const candidate=[...runs].find(r=>r.image&&/^https:\/\/www\.bungie\.net\/[a-zA-Z0-9_\/.-]+$/.test(r.image));
+ const image=candidate?`background-image:linear-gradient(0deg,#080913c9,#070a1022),url('${candidate.image}')`:'background-image:linear-gradient(120deg,transparent,#fff1 40%,transparent)';
+ const safeOpen=onOpen||"navigate('profile')";
+ const moment=recent&&Number.isFinite(recent.duration)?duration(recent.duration):'N/A';
+ const best=fastest?duration(fastest.duration):'N/A';
+ const mean=avg?duration(avg):'N/A';
+ return `<article class="record-tile eg-record-tile"><div class="record-tile-cover" style="--c1:${tone[0]};--c2:${tone[1]};${image}"><button type="button" class="record-cover-link" onclick="${safeOpen}" aria-label="View ${escapeHtml(name)} records"></button><div class="record-badges">${badge}</div><small>${year} · ${escapeHtml(place)}</small><h3>${escapeHtml(name)}</h3></div><div class="record-tile-content"><div class="record-chart-row">${egTimeline(key,runs)}<div class="record-total"><strong>${runs.length?finished.length:'—'}</strong><span>Recorded<br>completions</span><small class="verified-full-count">${verified.length} confirmed full starts</small></div></div><div class="record-times"><div><strong>${moment}</strong><span>Recent</span></div><div>${fastest?.instanceId?`<button class="record-bestlink eg-best-button" onclick="openActivityReport('${fastest.instanceId}')">${best} ↗</button>`:`<strong>${best}</strong>`}<span>Best full start</span>${fastest?`<small class="record-best-date">${escapeHtml(scanHistoryDate(fastest.date))}</small>`:''}</div><div><strong>${mean}</strong><span>Full-start avg</span></div></div>${!runs.length?`<p class="eg-card-empty">${escapeHtml(emptyText)}</p>`:''}</div></article>`;
+}
+async function egAutoVerifyForTab(tab){
+ if(!['raids','pantheon'].includes(tab)||!egRaidState.loaded||egRaidState.checking||egAutoCheckedTabs.has(tab))return;
+ egAutoCheckedTabs.add(tab);
+ await egCheckReports(tab==='raids'?'raid':'pantheon',16);
+}
+function egCheckToolbar(){return `<div class="eg-check-toolbar"><span>Full-start times and badges need PGCR verification. Unchecked history isn't labeled as a failed attempt.</span><button class="pill" type="button" onclick="egCheckReports()" ${egRaidState.checking?'disabled':''}>${egRaidState.checking?`Checking ${egRaidState.checked}…`:'Verify next 25 PGCRs ↻'}</button></div>`;}
+async function egCheckReports(kind="all",maxReports=25){
+ if(!liveProfile||egRaidState.checking)return;
+ const key=`${liveProfile.account.membershipType}:${liveProfile.account.membershipId}`;
+ if(key!==egRaidState.key)return;
+ const all=egRaidState.activities.filter(r=>r.instanceId&&/^\d{6,25}$/.test(String(r.instanceId))&&!egRaidState.reportInfo.has(r.instanceId));
+ const chosen=kind==='all'?all:all.filter(r=>r.category===kind);
+ const unique=[];const used=new Set();
+ for(const run of chosen){const group=run.category==='pantheon'?egPantheonKey(run):egMatchRaid(run.name)?.slug||run.name;if(!used.has(group)){unique.push(run);used.add(group)}}
+ const queue=[...unique,...chosen.filter(x=>!unique.includes(x))].slice(0,maxReports);
+ if(!queue.length)return;
+ egRaidState.checking=true;egRaidState.checked=0;render();
+ const version=egRaidState.autoVersion;const account=liveProfile.account;
+ async function worker(){while(queue.length&&version===egRaidState.autoVersion){const run=queue.shift();try{const raw=await fetchActivityPGCR(run.instanceId);egRaidState.reportInfo.set(run.instanceId,egClassifyLowman(raw,account));}catch{egRaidState.reportInfo.set(run.instanceId,{outcome:'unknown',verified:false,candidate:false,label:'PGCR unavailable'})}egRaidState.checked++;if(egRaidState.checked%5===0&&current==='guardian')render();}}
+ await Promise.all([worker(),worker()]);
+ if(version===egRaidState.autoVersion){egRaidState.checking=false;if(current==='guardian')render();}
+}
+(function egInstallV28Styles(){
+ const el=document.createElement('style');el.id='eg-v28-styles';
+ el.textContent=`
+ .eg-record-tile{border-radius:7px}.eg-record-tile .record-tile-cover{height:170px;background-size:cover;background-position:center}
+ .eg-record-tile .record-tile-content{min-height:215px}.eg-record-tile .record-badges{z-index:4}
+ .eg-generic-badge{background:#1e3556;border:1px solid #54719c;color:#d8eeff}
+ .eg-record-tile .record-dot-hit{position:relative}.eg-run-star{position:absolute;top:0;left:50%;transform:translate(-50%,-12%);font-size:10px;color:#fff;pointer-events:none;text-shadow:0 1px 4px #000}
+ .eg-check-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:13px 0 17px;color:var(--muted);font-size:11px;flex-wrap:wrap}
+ .eg-check-toolbar button{flex:none}.eg-best-button{border:0;background:none;padding:0;color:var(--accent);font-weight:800;cursor:pointer}
+ .eg-card-empty{color:var(--muted);font-size:10px;margin:13px 0 0;line-height:1.4}.eg-record-tile .record-chart{min-width:0}
+ .eg-record-tile .record-dot-hit .record-dot-pip{width:11px;height:11px}.eg-record-tile .record-dot-hit:hover .record-dot-pip{transform:scale(1.35)}
+ .eg-record-tile .record-dot-hit:focus-visible .record-dot-pip{outline:2px solid white;outline-offset:3px}
+ .eg-record-tile .record-times strong,.eg-record-tile .record-times button{font-variant-numeric:tabular-nums}
+ @media(max-width:740px){.eg-record-tile .record-tile-cover{height:185px}}
+ `;document.head.appendChild(el);
+})();
